@@ -9,14 +9,24 @@ import (
 
 func TestTokenizer(test *testing.T) {
 	text := utf8string.NewString(`
-        \x.\y.(f g) h
+        \x.\y.(foo bar) baz
     `)
-	// expected := [...]struct {
-	// 	domain.Token
-	// 	string
-	// }{
-	// 	{domain.TokenDot, `.`},
-	// }
+	expected := [...]struct {
+		domain.Token
+		string
+	}{
+		{domain.TokenLambda, `\`},
+		{domain.TokenIdentifier, "x"},
+		{domain.TokenDot, `.`},
+		{domain.TokenLambda, `\`},
+		{domain.TokenIdentifier, "y"},
+		{domain.TokenDot, `.`},
+		{domain.TokenLeftParen, `(`},
+		{domain.TokenIdentifier, "foo"},
+		{domain.TokenIdentifier, "bar"},
+		{domain.TokenRightParen, `)`},
+		{domain.TokenIdentifier, "baz"},
+	}
 
 	logger := domain.NewLogger()
 
@@ -24,12 +34,17 @@ func TestTokenizer(test *testing.T) {
 	tokenizer := NewTokenizer(&logger)
 	tokenizer.Tokenize(&source_code)
 
-	for _, t := range source_code.tokens {
-		test.Log(t)
-		if t.Tag == domain.TokenEof {
-			break
-		}
+	// strip eof
+	tokens := source_code.tokens[:len(source_code.tokens)-1]
+
+	for i, t := range tokens {
 		asStr := text.Slice(t.Start, t.End)
-		test.Log(asStr)
+		if expected[i].string != asStr ||
+			expected[i].Token != t.Tag {
+			test.Fatalf("Expected [%d %s] got [%d %s]",
+				expected[i].Token, expected[i].string,
+				t.Tag, asStr,
+			)
+		}
 	}
 }

@@ -40,9 +40,10 @@ func (tok *tokenizer) Tokenize(src *source_code) {
 	line, col := 1, 0
 
 	add_token := func(t domain.Token, length int) {
-		pos += length
-		col += length
-		tokens = append(tokens, token{t, pos, pos + length, line, col})
+		start, end := pos, pos+length
+		tokens = append(tokens, token{t, start, end, line, col})
+		pos = end
+		col = end
 	}
 
 	skip_spaces := func() {
@@ -59,6 +60,25 @@ func (tok *tokenizer) Tokenize(src *source_code) {
 		}
 	}
 
+	identifier_rune := func(r rune) bool {
+		return r != domain.TokenDotRune &&
+			r != domain.TokenLambdaRune &&
+			r != domain.TokenLeftParenRune &&
+			r != domain.TokenRightParenRune &&
+			!unicode.IsSpace(r)
+	}
+	identifier_length := func() int {
+		start, end := pos, pos
+		for end < src.text.RuneCount() {
+			c := src.text.At(end)
+			if !identifier_rune(c) {
+				return end - start
+			}
+			end++
+		}
+		return end - start
+	}
+
 	for {
 		skip_spaces()
 		if pos >= src.text.RuneCount() {
@@ -66,22 +86,19 @@ func (tok *tokenizer) Tokenize(src *source_code) {
 		}
 
 		switch src.text.At(pos) {
-		case domain.TokenDotString:
+		case domain.TokenDotRune:
 			add_token(domain.TokenDot, 1)
-		case domain.TokenLambdaString:
+		case domain.TokenLambdaRune:
 			add_token(domain.TokenLambda, 1)
-		case domain.TokenLeftParenString:
+		case domain.TokenLeftParenRune:
 			add_token(domain.TokenLeftParen, 1)
-		case domain.TokenRightParenString:
+		case domain.TokenRightParenRune:
 			add_token(domain.TokenRightParen, 1)
 		default:
-			index := domain.TokenIdentifierRegex.FindIndex([]byte(src.text.Slice(pos, src.text.RuneCount())))
-			if index == nil {
-				panic("Something went wrong")
+			length := identifier_length()
+			if length > 0 {
+				add_token(domain.TokenIdentifier, length)
 			}
-			start, end := index[0], index[1]
-			length := end - start + 1
-			add_token(domain.TokenIdentifier, length)
 		}
 	}
 
