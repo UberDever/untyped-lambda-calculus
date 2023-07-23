@@ -99,7 +99,7 @@ func testAstEquality(text, expected string) error {
 		case domain.NodeAbstraction:
 			arg := eval_stack.ForcePop()
 			body := eval_stack.ForcePop()
-			abstraction := fmt.Sprintf(`(lambda %s %s)`, arg, body)
+			abstraction := fmt.Sprintf(`(λ %s %s)`, arg, body)
 			eval_stack.Push(abstraction)
 		default:
 			panic("unreachable")
@@ -138,7 +138,7 @@ func TestAstPrimitive(test *testing.T) {
 
 func TestAstAbstraction(test *testing.T) {
 	text := `\x.x`
-	expected := `(lambda x x)`
+	expected := `(λ x x)`
 	if e := testAstEquality(text, expected); e != nil {
 		test.Error(e)
 	}
@@ -157,7 +157,19 @@ func TestAstSimple(test *testing.T) {
         ((\x.\y.\z.(x (y z))) ((\i.i) something))
     `
 	expected := `
-        ((lambda x (lambda y (lambda z (x (y z))))) ((lambda i i) something))
+        ((λ x (λ y (λ z (x (y z))))) ((λ i i) something))
+    `
+	if e := testAstEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+func TestAstUtf8(test *testing.T) {
+	text := `
+    ((\альфа.(альфа бета)) гамма)
+    `
+	expected := `
+        ((λ альфа (альфа бета)) гамма)
     `
 	if e := testAstEquality(text, expected); e != nil {
 		test.Error(e)
