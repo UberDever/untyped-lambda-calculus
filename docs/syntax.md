@@ -1,6 +1,6 @@
 # Untyped lambda calculus grammar
 
-The following is the grammar for untyped lambda calculus in strict form (with only unary functions)
+The following is the grammar for untyped lambda calculus in strict form (with only unary functions and mandatory parens)
 
 ### Lexer
 
@@ -18,7 +18,7 @@ right_paren ::= ')'
 
 term ::= 
     identifier
-    | left_paren? (application | abstraction) right_paren?
+    | left_paren (application | abstraction) right_paren
 
 application ::= term term
 

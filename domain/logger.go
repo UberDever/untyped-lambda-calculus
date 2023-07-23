@@ -25,6 +25,15 @@ type log_message struct {
 	message   string
 }
 
+func NewMessage(type_ message_type, line, col int, filename, message string) log_message {
+	return log_message{
+		type_:   type_,
+		line:    line,
+		col:     col,
+		message: message,
+	}
+}
+
 func (m log_message) String() string {
 	return fmt.Sprintf(sources[m.type_], m.filename, m.line, m.col, m.message)
 }
@@ -53,7 +62,7 @@ func (l *Logger) Add(m log_message) {
 	l.messages = append(l.messages, m)
 }
 
-func (l *Logger) Next() (ok bool, m log_message) {
+func (l *Logger) Next() (m log_message, ok bool) {
 	if l.next < len(l.messages) {
 		m = l.messages[l.next]
 		l.next++

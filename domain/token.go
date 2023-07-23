@@ -4,7 +4,7 @@ import (
 	"math"
 )
 
-type Token int
+type TokenId int
 
 const TokenInvalid = math.MinInt
 const TokenEof = -1
@@ -22,4 +22,14 @@ const (
 	TokenLambdaRune     rune = '\\'
 	TokenLeftParenRune  rune = '('
 	TokenRightParenRune rune = ')'
+)
+
+type NodeId int
+
+const NodeInvalid = math.MinInt
+
+const (
+	NodeIdentifier = iota
+	NodeApplication
+	NodeAbstraction
 )
