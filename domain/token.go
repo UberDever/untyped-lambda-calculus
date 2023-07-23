@@ -23,13 +23,3 @@ const (
 	TokenLeftParenRune  rune = '('
 	TokenRightParenRune rune = ')'
 )
-
-type NodeId int
-
-const NodeInvalid = math.MinInt
-
-const (
-	NodeIdentifier = iota
-	NodeApplication
-	NodeAbstraction
-)

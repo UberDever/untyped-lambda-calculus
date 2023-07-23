@@ -200,20 +200,20 @@ func (p *parser) Parse(src *source_code) ast.Sexpr {
 func (p *parser) parse_term() ast.Sexpr {
 	var node ast.Sexpr
 	if !p.matchTag(domain.TokenIdentifier) {
-		has_parens := p.matchTag(domain.TokenLeftParen)
-		if has_parens {
+		open_paren := p.matchTag(domain.TokenLeftParen)
+
+		if open_paren {
 			p.expect(domain.TokenLeftParen)
 		}
-
 		if p.matchTag(domain.TokenLambda) {
 			node = p.parse_abstraction()
 		} else {
 			node = p.parse_application()
 		}
-
-		if has_parens {
+		if open_paren {
 			p.expect(domain.TokenRightParen)
 		}
+
 	} else {
 		node = p.parse_identifier()
 	}
@@ -221,16 +221,17 @@ func (p *parser) parse_term() ast.Sexpr {
 }
 
 func (p *parser) parse_identifier() ast.Sexpr {
-	var node ast.Sexpr
 	identifier := p.src.Lexeme(p.current)
-	node = ast.S(identifier)
 	p.next()
-	return node
+	return ast.S(
+		domain.NodeIdentifier,
+		identifier,
+	)
 }
 
 func (p *parser) parse_application() ast.Sexpr {
 	return ast.S(
-		"Call",
+		domain.NodeApplication,
 		p.parse_term(),
 		p.parse_term(),
 	)
@@ -242,7 +243,7 @@ func (p *parser) parse_abstraction() ast.Sexpr {
 	p.expect(domain.TokenDot)
 	term := p.parse_term()
 	return ast.S(
-		"Lambda",
+		domain.NodeAbstraction,
 		identifier,
 		term,
 	)

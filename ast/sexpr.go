@@ -18,6 +18,10 @@ type cons struct {
 	lhs, rhs Sexpr
 }
 
+func (v Sexpr) Data() any {
+	return v.any
+}
+
 func (v Sexpr) IsAtom() bool {
 	switch v.any.(type) {
 	case nil:
