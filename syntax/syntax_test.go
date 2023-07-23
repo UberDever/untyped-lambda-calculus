@@ -127,6 +127,31 @@ func testAstEquality(text, expected string) error {
 
 // TODO: This is strict form, but it also would be good to support
 // convenient form (multiple arguments + inferred parens)
+
+func TestAstPrimitive(test *testing.T) {
+	text := `x`
+	expected := `x`
+	if e := testAstEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+func TestAstAbstraction(test *testing.T) {
+	text := `\x.x`
+	expected := `(lambda x x)`
+	if e := testAstEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+func TestAstApplication(test *testing.T) {
+	text := `(f g)`
+	expected := `(f g)`
+	if e := testAstEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
 func TestAstSimple(test *testing.T) {
 	text := `
         ((\x.\y.\z.(x (y z))) ((\i.i) something))
