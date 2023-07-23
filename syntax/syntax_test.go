@@ -78,6 +78,13 @@ func testAstEquality(text, expected string) error {
 		return report_errors(&logger)
 	}
 
+	// strip eof
+	// tokens := source_code.tokens[:len(source_code.tokens)-1]
+	// for _, t := range tokens {
+	// 	asStr := source_code.text.Slice(t.Start, t.End)
+	// 	fmt.Println(asStr)
+	// }
+
 	parser := NewParser(&logger)
 	tree := parser.Parse(&source_code)
 	if !logger.IsEmpty() {
@@ -145,8 +152,8 @@ func TestAstAbstraction(test *testing.T) {
 }
 
 func TestAstApplication(test *testing.T) {
-	text := `(f g)`
-	expected := `(f g)`
+	text := `f g h`
+	expected := `((f g) h)`
 	if e := testAstEquality(text, expected); e != nil {
 		test.Error(e)
 	}
@@ -166,7 +173,7 @@ func TestAstSimple(test *testing.T) {
 
 func TestAstUtf8(test *testing.T) {
 	text := `
-    ((\альфа.(альфа бета)) гамма)
+    (\альфа.альфа бета) гамма
     `
 	expected := `
         ((λ альфа (альфа бета)) гамма)

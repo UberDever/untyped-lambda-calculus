@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"lambda/ast"
 	"lambda/domain"
+	"lambda/util"
 	"unicode"
 
 	"golang.org/x/exp/utf8string"
@@ -143,8 +144,9 @@ type parser struct {
 	ast ast.Sexpr
 	src *source_code
 
-	current domain.TokenId
-	atEof   bool
+	current           domain.TokenId
+	atEof             bool
+	application_stack util.Stack[ast.Sexpr]
 
 	logger *domain.Logger
 }
@@ -194,28 +196,20 @@ func NewParser(logger *domain.Logger) parser {
 
 func (p *parser) Parse(src *source_code) ast.Sexpr {
 	p.src = src
+	p.application_stack = util.NewStack[ast.Sexpr]()
 	return p.parse_term()
 }
 
 func (p *parser) parse_term() ast.Sexpr {
 	var node ast.Sexpr
-	if !p.matchTag(domain.TokenIdentifier) {
-		open_paren := p.matchTag(domain.TokenLeftParen)
-
-		if open_paren {
-			p.expect(domain.TokenLeftParen)
-		}
-		if p.matchTag(domain.TokenLambda) {
-			node = p.parse_abstraction()
-		} else {
-			node = p.parse_application()
-		}
-		if open_paren {
-			p.expect(domain.TokenRightParen)
-		}
-
-	} else {
-		node = p.parse_identifier()
+	if p.matchTag(domain.TokenLeftParen) {
+		p.expect(domain.TokenLeftParen)
+		node = p.parse_term()
+		p.expect(domain.TokenRightParen)
+	} else if p.matchTag(domain.TokenLambda) {
+		return p.parse_abstraction()
+	} else if p.matchTag(domain.NodeIdentifier) {
+		return p.parse_application()
 	}
 	return node
 }
@@ -230,21 +224,26 @@ func (p *parser) parse_identifier() ast.Sexpr {
 }
 
 func (p *parser) parse_application() ast.Sexpr {
-	return ast.S(
-		domain.NodeApplication,
-		p.parse_term(),
-		p.parse_term(),
-	)
+	id := p.parse_identifier()
+	term, ok := p.application_stack.Pop()
+	if ok {
+		p.application_stack.Push(ast.S(domain.NodeApplication, term, id))
+	} else {
+		p.application_stack.Push(id)
+	}
+	if p.atEof || p.matchTag(domain.TokenRightParen) {
+		return p.application_stack.ForcePop()
+	}
+	return p.parse_term()
 }
 
 func (p *parser) parse_abstraction() ast.Sexpr {
 	p.expect(domain.TokenLambda)
 	identifier := p.parse_identifier()
 	p.expect(domain.TokenDot)
-	term := p.parse_term()
 	return ast.S(
 		domain.NodeAbstraction,
 		identifier,
-		term,
+		p.parse_term(),
 	)
 }
