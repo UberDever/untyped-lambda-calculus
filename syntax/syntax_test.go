@@ -145,8 +145,8 @@ func TestAstAbstraction(test *testing.T) {
 }
 
 func TestAstApplication(test *testing.T) {
-	text := `(f g)`
-	expected := `(f g)`
+	text := `((f g) h)`
+	expected := `((f g) h)`
 	if e := testAstEquality(text, expected); e != nil {
 		test.Error(e)
 	}
