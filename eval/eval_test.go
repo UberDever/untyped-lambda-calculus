@@ -113,10 +113,10 @@ func TestEvalUnreducable(test *testing.T) {
 }
 
 // TODO: Develop this further
-// func TestEvalApplication(test *testing.T) {
-// 	text := `((\x.\y.(x y)) (x y))`
-// 	expected := `(\y'.((x y) y'))`
-// 	if e := testEvalEquality(text, expected); e != nil {
-// 		test.Error(e)
-// 	}
-// }
+func TestEvalApplication(test *testing.T) {
+	text := `((\x.\y.\z.(y z x)) (x y z))`
+	expected := `(\y'\z'.(y' z' (x y z)))`
+	if e := testEvalEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
