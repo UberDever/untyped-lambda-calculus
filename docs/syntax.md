@@ -1,7 +1,7 @@
 # Untyped lambda calculus grammar
 
 The following is the grammar for untyped lambda calculus in strict form 
-(with only unary functions and mandatory parens around abstractions)
+(with only unary functions and mandatory parens around applications)
 
 ### Lexer
 
