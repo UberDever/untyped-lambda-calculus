@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"lambda/ast"
 	"lambda/domain"
+	"lambda/eval"
 	"lambda/util"
 	"strings"
 	"testing"
@@ -91,38 +92,7 @@ func testAstEquality(text, expected string) error {
 		return report_errors(&logger)
 	}
 
-	eval_stack := util.NewStack[any]()
-	eval := func() {
-		n := eval_stack.ForcePop().(int)
-		tag := domain.NodeId(n)
-		switch tag {
-		case domain.NodeIdentifier:
-			// nothing
-		case domain.NodeApplication:
-			lhs := eval_stack.ForcePop()
-			rhs := eval_stack.ForcePop()
-			application := fmt.Sprintf(`(%s %s)`, lhs, rhs)
-			eval_stack.Push(application)
-		case domain.NodeAbstraction:
-			arg := eval_stack.ForcePop()
-			body := eval_stack.ForcePop()
-			abstraction := fmt.Sprintf(`(λ %s %s)`, arg, body)
-			eval_stack.Push(abstraction)
-		default:
-			panic("unreachable")
-		}
-	}
-	onEnter := func(s ast.Sexpr) {
-		if s.IsAtom() {
-			eval_stack.Push(s.Data())
-		} else {
-			eval()
-		}
-	}
-	ast.TraversePostorder(tree, onEnter)
-	eval()
-
-	got := eval_stack.ForcePop().(string)
+	got := eval.ToString(tree, true)
 	if ast.Minified(got) != ast.Minified(expected) {
 		lhs := ast.Pretty(got)
 		rhs := ast.Pretty(expected)
@@ -152,7 +122,7 @@ func TestAstAbstraction(test *testing.T) {
 }
 
 func TestAstApplication(test *testing.T) {
-	text := `f g h`
+	text := `((f g) h)`
 	expected := `((f g) h)`
 	if e := testAstEquality(text, expected); e != nil {
 		test.Error(e)
