@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"lambda/ast"
 	"lambda/domain"
-	"lambda/eval"
 	"lambda/util"
 	"strings"
 	"testing"
@@ -79,20 +78,44 @@ func testAstEquality(text, expected string) error {
 		return report_errors(&logger)
 	}
 
-	// strip eof
-	// tokens := source_code.tokens[:len(source_code.tokens)-1]
-	// for _, t := range tokens {
-	// 	asStr := source_code.text.Slice(t.Start, t.End)
-	// 	fmt.Println(asStr)
-	// }
-
 	parser := NewParser(&logger)
 	tree := parser.Parse(&source_code)
 	if !logger.IsEmpty() {
 		return report_errors(&logger)
 	}
 
-	got := eval.ToString(tree, true)
+	eval_stack := util.NewStack[any]()
+	eval := func() {
+		n := eval_stack.ForcePop().(int)
+		tag := domain.NodeId(n)
+		switch tag {
+		case domain.NodeIdentifier:
+			// nothing
+		case domain.NodeApplication:
+			lhs := eval_stack.ForcePop()
+			rhs := eval_stack.ForcePop()
+			application := fmt.Sprintf(`(%s %s)`, lhs, rhs)
+			eval_stack.Push(application)
+		case domain.NodeAbstraction:
+			arg := eval_stack.ForcePop()
+			body := eval_stack.ForcePop()
+			abstraction := fmt.Sprintf(`(λ %s %s)`, arg, body)
+			eval_stack.Push(abstraction)
+		default:
+			panic("unreachable")
+		}
+	}
+	onEnter := func(s ast.Sexpr) {
+		if s.IsAtom() {
+			eval_stack.Push(s.Data())
+		} else {
+			eval()
+		}
+	}
+	ast.TraversePostorder(tree, onEnter)
+	eval()
+
+	got := eval_stack.ForcePop().(string)
 	if ast.Minified(got) != ast.Minified(expected) {
 		lhs := ast.Pretty(got)
 		rhs := ast.Pretty(expected)
@@ -101,9 +124,6 @@ func testAstEquality(text, expected string) error {
 	}
 	return nil
 }
-
-// TODO: This is strict form, but it also would be good to support
-// convenient form (multiple arguments + inferred parens)
 
 func TestAstPrimitive(test *testing.T) {
 	text := `x`
@@ -143,7 +163,7 @@ func TestAstSimple(test *testing.T) {
 
 func TestAstUtf8(test *testing.T) {
 	text := `
-    (\альфа.альфа бета) гамма
+    ((\альфа.(альфа бета)) гамма)
     `
 	expected := `
         ((λ альфа (альфа бета)) гамма)
