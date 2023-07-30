@@ -112,6 +112,11 @@ func TestEvalUnreducable(test *testing.T) {
 	}
 }
 
+// func TestEvalWHNF(test *testing.T) {
+// 	text := `((\x.\y.(x y)) y)`
+// 	expected := ``
+// }
+
 // TODO: Develop this further
 // func TestEvalApplication(test *testing.T) {
 // 	text := `((\x.\y.\z.(y z x)) (x y z))`

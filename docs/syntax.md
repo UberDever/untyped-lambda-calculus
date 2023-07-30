@@ -19,10 +19,8 @@ right_paren ::= ')'
 
 term ::= 
     identifier
-    | application
-    | abstraction
     | left_paren application right_paren
-    | left_paren abstraction right_paren
+    | left_paren? abstraction right_paren?
 
 application ::= term term
 

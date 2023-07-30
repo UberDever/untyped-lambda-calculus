@@ -1,15 +1,17 @@
 ## General TODO list
 
+- [x] Develop grammar
 - [x] Make lexer
 - [x] Make parser (strict)
 - [ ] Make parser (nonstrict) with following properties:
-    * Functions can be non-unary
+    * Functions can be non-unary (arguments separated by some symbol like ` ` or `,`)
     * Applications have non-mandatory parens, that inferred by associativity rules:
         - Applications are left-associative
         - Abstractions are right-associative
-- [ ] Make incremental contextes for each lambda term during postorder
-traversal
-    * They should include free/bound variables (for now)
+- [ ] Use [De bruijn indicies](https://www.researchgate.net/publication/2368794_Reviewing_the_Classical_and_the_de_Bruijn_Notation_for_-calculus_and_Pure_Type_Systems) 
+for evaluation to avoid alpla-conversion. Hence, make AST (or equivalent structure) to represent the use of such indicies. 
+Also use [slides](https://www.cs.vu.nl/~femke/courses/ep/slides/4x4.pdf)
+- [ ] Use normal order evaluation with WHNF
 - [ ] Add lexical bindings that simplify syntax
     * Should have the following form:
     ```
