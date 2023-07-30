@@ -6,11 +6,11 @@ import (
 
 type TokenId int
 
-const TokenInvalid = math.MinInt
-const TokenEof = -1
+const TokenInvalid TokenId = math.MinInt
+const TokenEof TokenId = -1
 
 const (
-	TokenIdentifier = iota
+	TokenIdentifier TokenId = iota
 	TokenDot
 	TokenLambda
 	TokenLeftParen

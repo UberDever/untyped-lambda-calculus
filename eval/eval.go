@@ -39,7 +39,7 @@ func ToString(expr ast.Sexpr, pretty bool) string {
 		n := eval_stack.ForcePop().(int)
 		tag := domain.NodeId(n)
 		switch tag {
-		case domain.NodeIdentifier:
+		case domain.NodeVariable:
 			// nothing
 		case domain.NodeApplication:
 			lhs := eval_stack.ForcePop()
@@ -94,10 +94,10 @@ func (c *eval_context) eval() {
 	n := c.stack.ForcePop().Data().(int)
 	tag := domain.NodeId(n)
 	switch tag {
-	case domain.NodeIdentifier:
+	case domain.NodeVariable:
 		str := c.stack.ForcePop()
 		identifier := ast.S(
-			domain.NodeIdentifier,
+			domain.NodeVariable,
 			str,
 		)
 		c.free_variables.Add(str.Data().(string))

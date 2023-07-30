@@ -91,11 +91,12 @@ func (tok tokenizer) Tokenize(filename string, text utf8string.String) source.So
 }
 
 type parser struct {
-	ast ast.Sexpr
 	src *source.SourceCode
 
-	current domain.TokenId
-	atEof   bool
+	ast_nodes []domain.Node
+	depth     int
+	current   domain.TokenId
+	atEof     bool
 
 	logger *domain.Logger
 }
@@ -139,17 +140,25 @@ func (p *parser) expect(tag domain.TokenId) (ok bool) {
 	return
 }
 
+func (p *parser) new_node(node domain.Node) domain.NodeId {
+	p.ast_nodes = append(p.ast_nodes, node)
+	return domain.NodeId(len(p.ast_nodes) - 1)
+}
+
 func NewParser(logger *domain.Logger) parser {
-	return parser{logger: logger}
+	return parser{logger: logger, depth: 1}
 }
 
-func (p *parser) Parse(src *source.SourceCode) ast.Sexpr {
+func (p *parser) Parse(src *source.SourceCode) ast.AST {
 	p.src = src
-	return p.parse_term()
+
+	root := p.parse_term()
+	return ast.NewAST(src, root, p.ast_nodes)
 }
 
-func (p *parser) parse_term() ast.Sexpr {
-	var node ast.Sexpr
+func (p *parser) parse_term() domain.NodeId {
+	id := domain.NodeInvalid
+
 	if !p.matchTag(domain.TokenIdentifier) {
 		open_paren := p.matchTag(domain.TokenLeftParen)
 
@@ -157,45 +166,55 @@ func (p *parser) parse_term() ast.Sexpr {
 			p.expect(domain.TokenLeftParen)
 		}
 		if p.matchTag(domain.TokenLambda) {
-			node = p.parse_abstraction()
+			id = p.parse_abstraction()
 		} else {
-			node = p.parse_application()
+			id = p.parse_application()
 		}
 		if open_paren {
 			p.expect(domain.TokenRightParen)
 		}
 
 	} else {
-		node = p.parse_identifier()
+		id = p.parse_variable()
 	}
-	return node
+
+	return id
 }
 
-func (p *parser) parse_identifier() ast.Sexpr {
-	identifier := p.src.Lexeme(p.current)
+func (p *parser) parse_variable() domain.NodeId {
+	tag, token, lhs, rhs := domain.NodeInvalid, domain.TokenInvalid, domain.NodeInvalid, domain.NodeInvalid
+
+	tag = domain.NodeVariable
+	token = p.current
+	lhs = domain.NodeId(p.depth)
+	rhs = domain.NodeNull
 	p.next()
-	return ast.S(
-		domain.NodeIdentifier,
-		identifier,
-	)
+
+	return p.new_node(domain.NodeConstructor[tag](token, lhs, rhs))
 }
 
-func (p *parser) parse_application() ast.Sexpr {
-	return ast.S(
-		domain.NodeApplication,
-		p.parse_term(),
-		p.parse_term(),
-	)
+func (p *parser) parse_application() domain.NodeId {
+	tag, token, lhs, rhs := domain.NodeInvalid, domain.TokenInvalid, domain.NodeInvalid, domain.NodeInvalid
+
+	tag = domain.NodeApplication
+	token = p.current
+	lhs = p.parse_term()
+	rhs = p.parse_term()
+
+	return p.new_node(domain.NodeConstructor[tag](token, lhs, rhs))
 }
 
-func (p *parser) parse_abstraction() ast.Sexpr {
+func (p *parser) parse_abstraction() domain.NodeId {
+	tag, token, lhs, rhs := domain.NodeInvalid, domain.TokenInvalid, domain.NodeInvalid, domain.NodeInvalid
+
+	tag = domain.NodeAbstraction
+	token = p.current
+	p.depth++
 	p.expect(domain.TokenLambda)
-	identifier := p.parse_identifier()
+	lhs = p.parse_variable()
 	p.expect(domain.TokenDot)
-	term := p.parse_term()
-	return ast.S(
-		domain.NodeAbstraction,
-		identifier,
-		term,
-	)
+	rhs = p.parse_term()
+	p.depth--
+
+	return p.new_node(domain.NodeConstructor[tag](token, lhs, rhs))
 }
