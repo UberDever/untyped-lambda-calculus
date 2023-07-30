@@ -11,6 +11,7 @@
 - [ ] Use [De bruijn indicies](https://www.researchgate.net/publication/2368794_Reviewing_the_Classical_and_the_de_Bruijn_Notation_for_-calculus_and_Pure_Type_Systems) 
 for evaluation to avoid alpla-conversion. Hence, make AST (or equivalent structure) to represent the use of such indicies. 
 Also use [slides](https://www.cs.vu.nl/~femke/courses/ep/slides/4x4.pdf)
+- [ ] For above use [sophisticated algorithm from here](https://www.researchgate.net/publication/2368794_Reviewing_the_Classical_and_the_de_Bruijn_Notation_for_-calculus_and_Pure_Type_Systems) for getting indicies for nodes
 - [ ] Use normal order evaluation with WHNF
 - [ ] Add lexical bindings that simplify syntax
     * Should have the following form:
