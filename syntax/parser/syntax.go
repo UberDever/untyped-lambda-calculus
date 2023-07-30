@@ -1,63 +1,14 @@
-package syntax
+package parser
 
 import (
 	"fmt"
 	"lambda/ast"
 	"lambda/domain"
+	"lambda/syntax/source"
 	"unicode"
 
 	"golang.org/x/exp/utf8string"
 )
-
-type token struct {
-	Tag                   domain.TokenId
-	Start, End, Line, Col int
-}
-
-type source_code struct {
-	filename string
-	text     utf8string.String
-	tokens   []token
-}
-
-func NewSourceCode(filename string, text utf8string.String) source_code {
-	return source_code{
-		filename: filename,
-		text:     text,
-		tokens:   nil,
-	}
-}
-
-func (s source_code) Location(id domain.TokenId) (line, col int) {
-	t := s.Token(id)
-	line = t.Line
-	col = t.Col
-	return
-}
-
-func (s source_code) Lexeme(id domain.TokenId) string {
-	t := s.Token(id)
-	return s.text.Slice(int(t.Start), int(t.End))
-}
-
-func (s source_code) Filename() string {
-	return s.filename
-}
-
-func (s source_code) Token(id domain.TokenId) token {
-	return s.tokens[id]
-}
-
-func (s source_code) TraceToken(tag domain.TokenId, lexeme string, line int, col int) string {
-	str := fmt.Sprintf("\ttag = %d\n", tag)
-	if lexeme != "" {
-		str += fmt.Sprintf("\tlexeme = %#v\n", lexeme)
-	}
-	if line != -1 && col != -1 {
-		str += "\tloc = " + fmt.Sprintf("%d", line) + ":" + fmt.Sprintf("%d", col) + "\n"
-	}
-	return str
-}
 
 type tokenizer struct {
 	logger *domain.Logger
@@ -67,21 +18,21 @@ func NewTokenizer(logger *domain.Logger) tokenizer {
 	return tokenizer{logger: logger}
 }
 
-func (tok *tokenizer) Tokenize(src *source_code) {
-	tokens := make([]token, 0, 16)
+func (tok tokenizer) Tokenize(filename string, text utf8string.String) source.SourceCode {
+	tokens := make([]domain.Token, 0, 16)
 	pos := 0
 	line, col := 1, 0
 
-	add_token := func(t domain.TokenId, length int) {
+	add_token := func(tag domain.TokenId, length int) {
 		start, end := pos, pos+length
-		tokens = append(tokens, token{t, start, end, line, col})
+		tokens = append(tokens, domain.NewToken(tag, start, end, line, col))
 		pos = end
 		col = end
 	}
 
 	skip_spaces := func() {
-		for pos < src.text.RuneCount() {
-			c := src.text.At(pos)
+		for pos < text.RuneCount() {
+			c := text.At(pos)
 			if !unicode.IsSpace(c) {
 				break
 			}
@@ -102,8 +53,8 @@ func (tok *tokenizer) Tokenize(src *source_code) {
 	}
 	identifier_length := func() int {
 		start, end := pos, pos
-		for end < src.text.RuneCount() {
-			c := src.text.At(end)
+		for end < text.RuneCount() {
+			c := text.At(end)
 			if !identifier_rune(c) {
 				return end - start
 			}
@@ -114,11 +65,11 @@ func (tok *tokenizer) Tokenize(src *source_code) {
 
 	for {
 		skip_spaces()
-		if pos >= src.text.RuneCount() {
+		if pos >= text.RuneCount() {
 			break
 		}
 
-		switch src.text.At(pos) {
+		switch text.At(pos) {
 		case domain.TokenDotRune:
 			add_token(domain.TokenDot, 1)
 		case domain.TokenLambdaRune:
@@ -135,13 +86,13 @@ func (tok *tokenizer) Tokenize(src *source_code) {
 		}
 	}
 
-	tokens = append(tokens, token{domain.TokenEof, -1, -1, -1, -1})
-	src.tokens = tokens
+	tokens = append(tokens, domain.NewTokenEof())
+	return source.NewSourceCode(filename, text, tokens)
 }
 
 type parser struct {
 	ast ast.Sexpr
-	src *source_code
+	src *source.SourceCode
 
 	current domain.TokenId
 	atEof   bool
@@ -179,7 +130,7 @@ func (p *parser) expect(tag domain.TokenId) (ok bool) {
 		expected := p.src.TraceToken(tag, "", int(domain.TokenEof), int(domain.TokenEof))
 		got := p.src.TraceToken(c.Tag, p.src.Lexeme(p.current), c.Line, c.Col)
 		message := fmt.Sprintf("\nExpected\n %s but got\n %s", expected, got)
-		p.logger.Add(domain.NewMessage(domain.Fatal, c.Line, c.Col, p.src.filename, message))
+		p.logger.Add(domain.NewMessage(domain.Fatal, c.Line, c.Col, p.src.Filename(), message))
 		p.atEof = true
 		return
 	}
@@ -192,7 +143,7 @@ func NewParser(logger *domain.Logger) parser {
 	return parser{logger: logger}
 }
 
-func (p *parser) Parse(src *source_code) ast.Sexpr {
+func (p *parser) Parse(src *source.SourceCode) ast.Sexpr {
 	p.src = src
 	return p.parse_term()
 }

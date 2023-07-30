@@ -1,4 +1,4 @@
-package syntax
+package parser
 
 import (
 	"errors"
@@ -35,14 +35,12 @@ func TestTokenizer(test *testing.T) {
 
 	logger := domain.NewLogger()
 
-	source_code := NewSourceCode("test", *text)
 	tokenizer := NewTokenizer(&logger)
-	tokenizer.Tokenize(&source_code)
+	source_code := tokenizer.Tokenize("test", *text)
 
-	// strip eof
-	tokens := source_code.tokens[:len(source_code.tokens)-1]
-
-	for i, t := range tokens {
+	// strip eof in iteration (note TokenCount - 1)
+	for i := 0; i < source_code.TokenCount()-1; i++ {
+		t := source_code.Token(domain.TokenId(i))
 		asStr := text.Slice(t.Start, t.End)
 		if expected[i].string != asStr ||
 			expected[i].TokenId != t.Tag {
@@ -69,11 +67,10 @@ func testAstEquality(text, expected string) error {
 	}
 
 	source := utf8string.NewString(text)
-	source_code := NewSourceCode("test", *source)
 	logger := domain.NewLogger()
 
 	tokenizer := NewTokenizer(&logger)
-	tokenizer.Tokenize(&source_code)
+	source_code := tokenizer.Tokenize("test", *source)
 	if !logger.IsEmpty() {
 		return report_errors(&logger)
 	}

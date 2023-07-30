@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"lambda/ast"
 	"lambda/domain"
-	"lambda/syntax"
+	"lambda/syntax/parser"
 	"lambda/util"
 	"strings"
 	"testing"
@@ -27,19 +27,18 @@ func parse_tree(text string) (tree ast.Sexpr, err error) {
 		return errors.New(builder.String())
 	}
 
-	source := utf8string.NewString(text)
-	source_code := syntax.NewSourceCode("test", *source)
+	src := utf8string.NewString(text)
 	logger := domain.NewLogger()
 
-	tokenizer := syntax.NewTokenizer(&logger)
-	tokenizer.Tokenize(&source_code)
+	tokenizer := parser.NewTokenizer(&logger)
+	source_code := tokenizer.Tokenize("test", *src)
 	if !logger.IsEmpty() {
 		err = report_errors(&logger)
 		return
 	}
 
-	parser := syntax.NewParser(&logger)
-	tree = parser.Parse(&source_code)
+	p := parser.NewParser(&logger)
+	tree = p.Parse(&source_code)
 	if !logger.IsEmpty() {
 		err = report_errors(&logger)
 		return
