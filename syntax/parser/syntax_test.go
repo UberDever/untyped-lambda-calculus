@@ -186,3 +186,15 @@ func TestAst4(test *testing.T) {
 		test.Error(e)
 	}
 }
+
+func TestAst5(test *testing.T) {
+	text := `
+        \x.\y.\s.\z.((x s) ((y s) z))
+    `
+	expected := `
+        (λ (λ (λ (λ ((3 1) ((2 1) 0))))))
+    `
+	if e := testAstEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
