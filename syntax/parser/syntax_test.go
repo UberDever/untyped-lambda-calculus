@@ -93,7 +93,7 @@ func testAstEquality(text, expected string) error {
 
 func TestAstPrimitive(test *testing.T) {
 	text := `x`
-	expected := `x`
+	expected := `0`
 	if e := testAstEquality(text, expected); e != nil {
 		test.Error(e)
 	}
@@ -101,7 +101,7 @@ func TestAstPrimitive(test *testing.T) {
 
 func TestAstAbstraction(test *testing.T) {
 	text := `\x.x`
-	expected := `(λ x x)`
+	expected := `(λ 0)`
 	if e := testAstEquality(text, expected); e != nil {
 		test.Error(e)
 	}
@@ -109,19 +109,7 @@ func TestAstAbstraction(test *testing.T) {
 
 func TestAstApplication(test *testing.T) {
 	text := `((f g) h)`
-	expected := `((f g) h)`
-	if e := testAstEquality(text, expected); e != nil {
-		test.Error(e)
-	}
-}
-
-func TestAstSimple(test *testing.T) {
-	text := `
-        ((\x.\y.\z.(x (y z))) ((\i.i) something))
-    `
-	expected := `
-        ((λ x (λ y (λ z (x (y z))))) ((λ i i) something))
-    `
+	expected := `((0 1) 2)`
 	if e := testAstEquality(text, expected); e != nil {
 		test.Error(e)
 	}
@@ -132,7 +120,67 @@ func TestAstUtf8(test *testing.T) {
     ((\альфа.(альфа бета)) гамма)
     `
 	expected := `
-        ((λ альфа (альфа бета)) гамма)
+        ((λ (0 1)) 1)
+    `
+	if e := testAstEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+func TestAstFreeVarEncounteredAfter(test *testing.T) {
+	text := `
+        (((\x.x) free_var) (\free_var.free_var)) 
+    `
+	expected := `
+        (((λ 0) 0) (λ 0))
+    `
+	if e := testAstEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+func TestAst1(test *testing.T) {
+	text := `
+        ((\x.\y.\z.(x (y z))) ((\i.i) something))
+    `
+	expected := `
+        ((λ (λ (λ (2 (1 0))))) ((λ 0) 0))
+    `
+	if e := testAstEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+func TestAst2(test *testing.T) {
+	text := `
+        ((\x.\x.x) (\y.y))
+    `
+	expected := `
+        ((λ (λ 0)) (λ 0))
+    `
+	if e := testAstEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+func TestAst3(test *testing.T) {
+	text := `
+        (\z.((x y) z)) 
+    `
+	expected := `
+        (λ ((1 2) 0))
+    `
+	if e := testAstEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+func TestAst4(test *testing.T) {
+	text := `
+        ((\u.\v.(u x)) y)
+    `
+	expected := `
+        ((λ (λ (1 2))) 1)
     `
 	if e := testAstEquality(text, expected); e != nil {
 		test.Error(e)

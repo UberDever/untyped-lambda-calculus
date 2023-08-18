@@ -24,12 +24,19 @@ func (ast AST) Node(id domain.NodeId) domain.Node {
 func (ast AST) Print() string {
 	str := strings.Builder{}
 	onEnter := func(ast *AST, id domain.NodeId) {
-		str.WriteByte('(')
 		node := ast.Node(id)
+		if node.Tag != domain.NodeVariable {
+			str.WriteByte('(')
+		} else {
+			str.WriteByte(' ')
+		}
 		str.WriteString(NodeString[node.Tag](ast, id))
 	}
-	onExit := func(_ *AST, _ domain.NodeId) {
-		str.WriteByte(')')
+	onExit := func(ast *AST, id domain.NodeId) {
+		node := ast.Node(id)
+		if node.Tag != domain.NodeVariable {
+			str.WriteByte(')')
+		}
 	}
 	ast.TraversePreorder(onEnter, onExit)
 
@@ -103,18 +110,18 @@ func ApplicationNode_String(ast *AST, id domain.NodeId) string {
 }
 
 type AbstractionNode struct {
-	Variable, Body domain.NodeId
+	Body domain.NodeId
 }
 
 func (ast *AST) AbstractionNode(node domain.Node) AbstractionNode {
 	return AbstractionNode{
-		Variable: node.Lhs, Body: node.Rhs,
+		Body: node.Rhs,
 	}
 }
 
 func AbstractionNode_Children(ast *AST, id domain.NodeId) (domain.NodeId, domain.NodeId) {
 	n := ast.AbstractionNode(ast.nodes[id])
-	return n.Variable, n.Body
+	return n.Body, domain.NodeNull
 }
 
 func AbstractionNode_String(ast *AST, id domain.NodeId) string {

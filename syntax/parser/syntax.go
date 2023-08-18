@@ -5,6 +5,7 @@ import (
 	"lambda/ast"
 	"lambda/domain"
 	"lambda/syntax/source"
+	"lambda/util"
 	"unicode"
 
 	"golang.org/x/exp/utf8string"
@@ -94,9 +95,11 @@ type parser struct {
 	src *source.SourceCode
 
 	ast_nodes []domain.Node
-	depth     int
 	current   domain.TokenId
 	atEof     bool
+
+	abstraction_vars  util.Stack[string]
+	free_vars_context map[string]int
 
 	logger *domain.Logger
 }
@@ -146,7 +149,10 @@ func (p *parser) new_node(node domain.Node) domain.NodeId {
 }
 
 func NewParser(logger *domain.Logger) parser {
-	return parser{logger: logger, depth: 1}
+	return parser{
+		logger:            logger,
+		free_vars_context: make(map[string]int),
+	}
 }
 
 func (p *parser) Parse(src *source.SourceCode) ast.AST {
@@ -186,7 +192,40 @@ func (p *parser) parse_variable() domain.NodeId {
 
 	tag = domain.NodeVariable
 	token = p.current
-	lhs = domain.NodeId(p.depth)
+
+	abs_var_id := func(variable string) domain.NodeId {
+		vars := p.abstraction_vars.Values()
+		// traverse in reverse order to encounter variable of closest lambda abstraction
+		abstractions_encountered := len(vars) - 1
+		for i := abstractions_encountered; i >= 0; i-- {
+			id := vars[i]
+			if id == variable {
+				return domain.NodeId(abstractions_encountered - i)
+			}
+		}
+		return domain.NodeNull
+	}
+
+	free_var_id := func(variable string) domain.NodeId {
+		index, ok := p.free_vars_context[variable]
+		var free_id int
+		if !ok {
+			free_id = len(p.free_vars_context)
+			p.free_vars_context[variable] = free_id
+		} else {
+			free_id = index
+		}
+		abstractions_encountered := len(p.abstraction_vars.Values()) - 1
+		free_id += abstractions_encountered + 1
+		return domain.NodeId(free_id)
+	}
+
+	identifier := p.src.Lexeme(token)
+	lhs = abs_var_id(identifier)
+	if lhs == domain.NodeNull {
+		lhs = free_var_id(identifier)
+	}
+
 	rhs = domain.NodeNull
 	p.next()
 
@@ -209,12 +248,15 @@ func (p *parser) parse_abstraction() domain.NodeId {
 
 	tag = domain.NodeAbstraction
 	token = p.current
-	p.depth++
 	p.expect(domain.TokenLambda)
-	lhs = p.parse_variable()
+
+	id := p.src.Lexeme(p.current)
+	p.abstraction_vars.Push(id)
+	p.next()
+
 	p.expect(domain.TokenDot)
 	rhs = p.parse_term()
-	p.depth--
+	p.abstraction_vars.Pop()
 
 	return p.new_node(domain.NodeConstructor[tag](token, lhs, rhs))
 }
