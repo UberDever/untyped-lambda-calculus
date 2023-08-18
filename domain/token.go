@@ -19,7 +19,7 @@ const (
 
 const (
 	TokenDotRune        rune = '.'
-	TokenLambdaRune     rune = '\\'
+	TokenLambdaRune     rune = 'λ'
 	TokenLeftParenRune  rune = '('
 	TokenRightParenRune rune = ')'
 )

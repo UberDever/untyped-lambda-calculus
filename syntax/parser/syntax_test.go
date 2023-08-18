@@ -14,16 +14,16 @@ import (
 
 func TestTokenizer(test *testing.T) {
 	text := utf8string.NewString(`
-        \x.\y.(foo bar) baz
+        λx.λy.(foo bar) baz
     `)
 	expected := [...]struct {
 		domain.TokenId
 		string
 	}{
-		{domain.TokenLambda, `\`},
+		{domain.TokenLambda, `λ`},
 		{domain.TokenIdentifier, "x"},
 		{domain.TokenDot, `.`},
-		{domain.TokenLambda, `\`},
+		{domain.TokenLambda, `λ`},
 		{domain.TokenIdentifier, "y"},
 		{domain.TokenDot, `.`},
 		{domain.TokenLeftParen, `(`},
@@ -100,7 +100,7 @@ func TestAstPrimitive(test *testing.T) {
 }
 
 func TestAstAbstraction(test *testing.T) {
-	text := `\x.x`
+	text := `λx.x`
 	expected := `(λ 0)`
 	if e := testAstEquality(text, expected); e != nil {
 		test.Error(e)
@@ -117,7 +117,7 @@ func TestAstApplication(test *testing.T) {
 
 func TestAstUtf8(test *testing.T) {
 	text := `
-    ((\альфа.(альфа бета)) гамма)
+    ((λальфа.(альфа бета)) гамма)
     `
 	expected := `
         ((λ (0 1)) 1)
@@ -129,7 +129,7 @@ func TestAstUtf8(test *testing.T) {
 
 func TestAstFreeVarEncounteredAfter(test *testing.T) {
 	text := `
-        (((\x.x) free_var) (\free_var.free_var)) 
+        (((λx.x) free_var) (λfree_var.free_var)) 
     `
 	expected := `
         (((λ 0) 0) (λ 0))
@@ -141,7 +141,7 @@ func TestAstFreeVarEncounteredAfter(test *testing.T) {
 
 func TestAst1(test *testing.T) {
 	text := `
-        ((\x.\y.\z.(x (y z))) ((\i.i) something))
+        ((λx.λy.λz.(x (y z))) ((λi.i) something))
     `
 	expected := `
         ((λ (λ (λ (2 (1 0))))) ((λ 0) 0))
@@ -153,7 +153,7 @@ func TestAst1(test *testing.T) {
 
 func TestAst2(test *testing.T) {
 	text := `
-        ((\x.\x.x) (\y.y))
+        ((λx.λx.x) (λy.y))
     `
 	expected := `
         ((λ (λ 0)) (λ 0))
@@ -165,7 +165,7 @@ func TestAst2(test *testing.T) {
 
 func TestAst3(test *testing.T) {
 	text := `
-        (\z.((x y) z)) 
+        (λz.((x y) z)) 
     `
 	expected := `
         (λ ((1 2) 0))
@@ -177,7 +177,7 @@ func TestAst3(test *testing.T) {
 
 func TestAst4(test *testing.T) {
 	text := `
-        ((\u.\v.(u x)) y)
+        ((λu.λv.(u x)) y)
     `
 	expected := `
         ((λ (λ (1 2))) 1)
@@ -189,7 +189,7 @@ func TestAst4(test *testing.T) {
 
 func TestAst5(test *testing.T) {
 	text := `
-        \x.\y.\s.\z.((x s) ((y s) z))
+        λx.λy.λs.λz.((x s) ((y s) z))
     `
 	expected := `
         (λ (λ (λ (λ ((3 1) ((2 1) 0))))))

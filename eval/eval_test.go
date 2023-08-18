@@ -60,7 +60,7 @@ package eval
 // }
 //
 // func TestEvalAbstraction(test *testing.T) {
-// 	text := `\x.x`
+// 	text := `λx.x`
 // 	expected := `(\ x x)`
 // 	if e := testEvalEquality(text, expected); e != nil {
 // 		test.Error(e)
@@ -68,7 +68,7 @@ package eval
 // }
 //
 // func TestEvalBoundVariables(test *testing.T) {
-// 	text := `\x.\y.\z.((((f g) (h x)) y) z)`
+// 	text := `λx.λy.λz.((((f g) (h x)) y) z)`
 // 	expected_bound := []string{"x", "y", "z"}
 // 	expected_free := []string{"f", "g", "h"}
 //
@@ -99,13 +99,13 @@ package eval
 // }
 
 // func TestEvalWHNF(test *testing.T) {
-// 	text := `((\x.\y.(x y)) y)`
+// 	text := `((λx.λy.(x y)) y)`
 // 	expected := ``
 // }
 
 // TODO: Develop this further
 // func TestEvalApplication(test *testing.T) {
-// 	text := `((\x.\y.\z.(y z x)) (x y z))`
+// 	text := `((λx.λy.λz.(y z x)) (x y z))`
 // 	expected := `(\y'\z'.(y' z' (x y z)))`
 // 	if e := testEvalEquality(text, expected); e != nil {
 // 		test.Error(e)
