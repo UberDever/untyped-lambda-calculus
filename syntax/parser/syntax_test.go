@@ -198,3 +198,19 @@ func TestAst5(test *testing.T) {
 		test.Error(e)
 	}
 }
+
+func TestAstUnclosedParen(test *testing.T) {
+	text := ` (λx.x `
+	expected := `λ 0`
+	if e := testAstEquality(text, expected); e == nil {
+		test.Error("Expected error with unclosed paren")
+	}
+}
+
+func TestAstApplicationWithoutParens(test *testing.T) {
+	text := `x y`
+	expected := `(0 1)`
+	if e := testAstEquality(text, expected); e == nil {
+		test.Error("Expected error with unparentesized application")
+	}
+}

@@ -117,25 +117,29 @@ func (p *parser) matchTag(tag domain.TokenId) bool {
 	if p.atEof {
 		return false
 	}
-
 	c := p.src.Token(p.current)
 	return c.Tag == tag
 }
 
 func (p *parser) expect(tag domain.TokenId) (ok bool) {
+	report_error := func(expected, got string, line, col int) {
+		message := fmt.Sprintf("\nExpected\n %s but got\n %s", expected, got)
+		p.logger.Add(domain.NewMessage(domain.Fatal, line, col, p.src.Filename(), message))
+	}
+
+	expected := p.src.TraceToken(tag, "", int(domain.TokenEof), int(domain.TokenEof))
+
 	if p.atEof {
+		got := "EOF"
+		report_error(expected, got, -1, -1)
 		return
 	}
 
 	ok = p.matchTag(tag)
-
 	if !ok {
 		c := p.src.Token(p.current)
-		expected := p.src.TraceToken(tag, "", int(domain.TokenEof), int(domain.TokenEof))
 		got := p.src.TraceToken(c.Tag, p.src.Lexeme(p.current), c.Line, c.Col)
-		message := fmt.Sprintf("\nExpected\n %s but got\n %s", expected, got)
-		p.logger.Add(domain.NewMessage(domain.Fatal, c.Line, c.Col, p.src.Filename(), message))
-		p.atEof = true
+		report_error(expected, got, c.Line, c.Col)
 		return
 	}
 
@@ -159,6 +163,12 @@ func (p *parser) Parse(src *source.SourceCode) ast.AST {
 	p.src = src
 
 	root := p.parse_term()
+	if !p.atEof {
+		message := "Unexpected EOF"
+		// NOTE: line and column values here are handy to reporting, but I have removed them
+		// from parser implementation, don't remember why
+		p.logger.Add(domain.NewMessage(domain.Fatal, -1, -1, p.src.Filename(), message))
+	}
 	return ast.NewAST(src, root, p.ast_nodes)
 }
 
