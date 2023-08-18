@@ -18,10 +18,11 @@ const (
 )
 
 const (
-	TokenDotRune        rune = '.'
-	TokenLambdaRune     rune = 'λ'
-	TokenLeftParenRune  rune = '('
-	TokenRightParenRune rune = ')'
+	TokenDotRune             rune = '.'
+	TokenLambdaBackslashRune rune = '\\'
+	TokenLambdaRune          rune = 'λ'
+	TokenLeftParenRune       rune = '('
+	TokenRightParenRune      rune = ')'
 )
 
 type Token struct {

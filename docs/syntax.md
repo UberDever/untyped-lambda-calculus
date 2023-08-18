@@ -7,21 +7,16 @@ The following is the grammar for untyped lambda calculus in strict form
 
 identifier ::= `[a-zA-Z+-*/=<>?!_][a-zA-Z0-9+-*/=<>?!_]*`
 
-dot ::= '.'
-
-lambda ::= '\'
-
-left_paren ::= '('
-
-right_paren ::= ')'
+lambda ::= '\' | 'λ'
 
 ### Parser
 
 term ::= 
     identifier
-    | left_paren application right_paren
-    | left_paren? abstraction right_paren?
+    | '(' application ')'
+    | '('? abstraction ')'?
+    | 'let' identifier '=' term 'in' term
 
 application ::= term term
 
-abstraction ::= lambda identifier dot term
+abstraction ::= lambda identifier '.' term
