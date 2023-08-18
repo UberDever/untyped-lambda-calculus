@@ -8,10 +8,11 @@
     * Applications have non-mandatory parens, that inferred by associativity rules:
         - Applications are left-associative
         - Abstractions are right-associative
-- [ ] Use [De bruijn indicies](https://www.researchgate.net/publication/2368794_Reviewing_the_Classical_and_the_de_Bruijn_Notation_for_-calculus_and_Pure_Type_Systems) 
+- [x] Use [De bruijn indicies](https://www.researchgate.net/publication/2368794_Reviewing_the_Classical_and_the_de_Bruijn_Notation_for_-calculus_and_Pure_Type_Systems) 
 for evaluation to avoid alpla-conversion. Hence, make AST (or equivalent structure) to represent the use of such indicies. 
 Also use [slides](https://www.cs.vu.nl/~femke/courses/ep/slides/4x4.pdf)
-- [ ] For above use [sophisticated algorithm from here](https://www.researchgate.net/publication/2368794_Reviewing_the_Classical_and_the_de_Bruijn_Notation_for_-calculus_and_Pure_Type_Systems) for getting indicies for nodes
+- [x] For above use [sophisticated algorithm from here](https://www.researchgate.net/publication/2368794_Reviewing_the_Classical_and_the_de_Bruijn_Notation_for_-calculus_and_Pure_Type_Systems) for getting indicies for nodes
+      [**Note: used [lecture](https://www.cs.cornell.edu/courses/cs4110/2018fa/lectures/lecture15.pdf)**]
 - [ ] Use normal order evaluation with WHNF
 - [ ] Add lexical bindings that simplify syntax
     * Should have the following form:
