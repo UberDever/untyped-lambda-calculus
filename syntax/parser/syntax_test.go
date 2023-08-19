@@ -199,6 +199,33 @@ func TestAst5(test *testing.T) {
 	}
 }
 
+func TestAstSimpleLet(test *testing.T) {
+	text := `
+        let a = 5 in ((λx.x) a)
+    `
+	// ((λa.((λx.x) a)) 5)
+	expected := `
+        ((λ ((λ 0) 1)) 0)
+    `
+	if e := testAstEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+func TestAstMultipleLet(test *testing.T) {
+	text := `
+        let a = 4 in
+        let b = 5 in
+        (((λx.λy.((+ x) y)) a) b)
+    `
+	expected := `
+        (((λ λ (((λ λ ((+ 1) 0)) 1) 0)) 0) 1)
+    `
+	if e := testAstEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
 func TestAstUnclosedParen(test *testing.T) {
 	text := ` (λx.x `
 	expected := `λ 0`

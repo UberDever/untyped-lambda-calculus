@@ -115,7 +115,7 @@ type AbstractionNode struct {
 
 func (ast *AST) AbstractionNode(node domain.Node) AbstractionNode {
 	return AbstractionNode{
-		Body: node.Rhs,
+		Body: node.Lhs,
 	}
 }
 

@@ -272,14 +272,25 @@ func (p *parser) parse_abstraction() domain.NodeId {
 	p.next()
 
 	p.expect(domain.TokenDot, "")
-	rhs = p.parse_term()
+	lhs = p.parse_term()
 	p.abstraction_vars.Pop()
 
 	return p.new_node(domain.NodeConstructor[tag](token, lhs, rhs))
 }
 
 func (p *parser) parse_let_binding() domain.NodeId {
-	tag, token, lhs, rhs := domain.NodeInvalid, domain.TokenInvalid, domain.NodeInvalid, domain.NodeInvalid
 
-	return p.new_node(domain.NodeConstructor[tag](token, lhs, rhs))
+	token := p.current
+	p.expect(domain.TokenIdentifier, "let")
+	id := p.src.Lexeme(p.current)
+	p.abstraction_vars.Push(id)
+	p.next()
+	p.expect(domain.TokenIdentifier, "=")
+	value := p.parse_term()
+	p.expect(domain.TokenIdentifier, "in")
+	expr := p.parse_term()
+	p.abstraction_vars.Pop()
+
+	absraction := p.new_node(domain.NodeConstructor[domain.NodeAbstraction](token, expr, domain.NodeNull))
+	return p.new_node(domain.NodeConstructor[domain.NodeApplication](token, absraction, value))
 }
