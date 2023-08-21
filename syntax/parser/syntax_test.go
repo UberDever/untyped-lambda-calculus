@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"lambda/ast"
 	"lambda/domain"
+	"lambda/middle"
 	"lambda/util"
 	"strings"
 	"testing"
@@ -76,12 +77,13 @@ func testAstEquality(text, expected string) error {
 	}
 
 	parser := NewParser(&logger)
-	tree := parser.Parse(&source_code)
+	namedTree := parser.Parse(&source_code)
+	deBruijn := middle.ToDeBruijn(namedTree)
 	if !logger.IsEmpty() {
 		return report_errors(&logger)
 	}
 
-	got := tree.Print()
+	got := deBruijn.Print()
 	if ast.Minified(got) != ast.Minified(expected) {
 		lhs := ast.Pretty(got)
 		rhs := ast.Pretty(expected)
