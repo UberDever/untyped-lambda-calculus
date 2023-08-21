@@ -25,3 +25,15 @@ let b = 5 in
 =let-rewrite>
 (f ((λg.g) 8))
 ```
+
+### Let arithemtic
+```
+    let a = -7 in
+    let b = 69 in
+    let c = 42 in
+    ((* c) ((+ a) b))
+=let-rewrite>
+    ((λa.((λb.((λc.((* c)((+ a) b))) 42)) 69)) -7)
+=indices>
+    ((λ ((λ ((λ ((3 0)((4 2) 1))) 4)) 4)) 4)
+```

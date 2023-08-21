@@ -1,7 +1,6 @@
 package middle
 
 import (
-	"fmt"
 	AST "lambda/ast"
 	"lambda/domain"
 	"lambda/util"
@@ -11,7 +10,8 @@ type deBruijnContext struct {
 	abstraction_vars  util.Stack[string]
 	free_vars_context map[string]int
 	indicies          util.Stack[domain.NodeId]
-	next_var_bound    bool
+
+	node_ids util.Stack[domain.NodeId]
 }
 
 func ToDeBruijn(namedAST AST.AST) AST.AST {
@@ -19,6 +19,7 @@ func ToDeBruijn(namedAST AST.AST) AST.AST {
 		abstraction_vars:  util.NewStack[string](),
 		free_vars_context: make(map[string]int),
 		indicies:          util.NewStack[domain.NodeId](),
+		node_ids:          util.NewStack[domain.NodeId](),
 	}
 
 	abs_var_id := func(variable string) domain.NodeId {
@@ -59,20 +60,16 @@ func ToDeBruijn(namedAST AST.AST) AST.AST {
 		switch node.Tag {
 		case domain.NodeNamedVariable:
 			id := ast.NamedVariableNode(node).Name
-			if ctx.next_var_bound {
-				ctx.abstraction_vars.Push(id)
-				ctx.next_var_bound = false
-			}
 			index := abs_var_id(id)
 			if index == domain.NodeNull {
 				index = free_var_id(id)
 			}
 			ctx.indicies.Push(index)
-			fmt.Printf("%s -> %d\n", id, index)
 		case domain.NodeApplication:
 			break
 		case domain.NodeAbstraction:
-			ctx.next_var_bound = true
+			bound := ast.Node(ast.AbstractionNode(node).Bound)
+			ctx.abstraction_vars.Push(ast.NamedVariableNode(bound).Name)
 		default:
 			panic("Unreachable")
 		}
@@ -80,15 +77,22 @@ func ToDeBruijn(namedAST AST.AST) AST.AST {
 
 	onExit := func(ast *AST.AST, node_id domain.NodeId) {
 		node := ast.Node(node_id)
+		token := node.Token
 		switch node.Tag {
 		case domain.NodeNamedVariable:
 			index := ctx.indicies.ForcePop()
-			new_node(domain.NodeConstructor[domain.NodeIndexVariable](node.Token, index, node.Rhs))
+			id := new_node(domain.NodeConstructor[domain.NodeIndexVariable](token, index, domain.NodeNull))
+			ctx.node_ids.Push(id)
 		case domain.NodeApplication:
-			new_node(domain.NodeConstructor[node.Tag](node.Token, node.Lhs, node.Rhs))
+			rhs := ctx.node_ids.ForcePop()
+			lhs := ctx.node_ids.ForcePop()
+			id := new_node(domain.NodeConstructor[domain.NodeApplication](token, lhs, rhs))
+			ctx.node_ids.Push(id)
 		case domain.NodeAbstraction:
-			body := ast.AbstractionNode(node).Body
-			new_node(domain.NodeConstructor[domain.NodePureAbstraction](node.Token, body, domain.NodeNull))
+			body := ctx.node_ids.ForcePop()
+			_ = ctx.node_ids.ForcePop() // variable
+			id := new_node(domain.NodeConstructor[domain.NodePureAbstraction](token, body, domain.NodeNull))
+			ctx.node_ids.Push(id)
 			ctx.abstraction_vars.Pop()
 		default:
 			panic("Unreachable")

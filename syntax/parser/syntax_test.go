@@ -216,12 +216,13 @@ func TestAstSimpleLet(test *testing.T) {
 
 func TestAstMultipleLet(test *testing.T) {
 	text := `
-        let a = 4 in
-        let b = 5 in
-        (((λx.λy.((+ x) y)) a) b)
+        let a = -7 in
+        let b = 69 in
+        let c = 42 in
+        ((* c) ((+ a) b))
     `
 	expected := `
-        (((λ λ (((λ λ ((+ 1) 0)) 1) 0)) 0) 1)
+        ((λ ((λ ((λ ((3 0)((4 2) 1))) 4)) 4)) 4)
     `
 	if e := testAstEquality(text, expected); e != nil {
 		test.Error(e)
