@@ -283,11 +283,11 @@ func (p *parser) parse_let_binding() domain.NodeId {
 	token := p.current
 	p.expect(domain.TokenIdentifier, "let")
 	id := p.src.Lexeme(p.current)
-	p.abstraction_vars.Push(id)
 	p.next()
 	p.expect(domain.TokenIdentifier, "=")
 	value := p.parse_term()
 	p.expect(domain.TokenIdentifier, "in")
+	p.abstraction_vars.Push(id)
 	expr := p.parse_term()
 	p.abstraction_vars.Pop()
 

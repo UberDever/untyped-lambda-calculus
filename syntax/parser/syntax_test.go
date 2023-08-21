@@ -201,11 +201,11 @@ func TestAst5(test *testing.T) {
 
 func TestAstSimpleLet(test *testing.T) {
 	text := `
-        let a = 5 in ((λx.x) a)
+        let u = y in λv.(u x)
     `
-	// ((λa.((λx.x) a)) 5)
+	// ((λu.λv.(u x)) y)
 	expected := `
-        ((λ ((λ 0) 1)) 0)
+        ((λ (λ (1 2))) 1)
     `
 	if e := testAstEquality(text, expected); e != nil {
 		test.Error(e)
