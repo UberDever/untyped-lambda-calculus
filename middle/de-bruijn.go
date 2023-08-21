@@ -10,14 +10,14 @@ import (
 type deBruijnContext struct {
 	abstraction_vars  util.Stack[string]
 	free_vars_context map[string]int
-	curIndex          domain.NodeId
+	indicies          util.Stack[domain.NodeId]
 }
 
 func ToDeBruijn(namedAST AST.AST) AST.AST {
 	ctx := deBruijnContext{
 		abstraction_vars:  util.NewStack[string](),
 		free_vars_context: make(map[string]int),
-		curIndex:          domain.NodeNull,
+		indicies:          util.NewStack[domain.NodeId](),
 	}
 
 	abs_var_id := func(variable string) domain.NodeId {
@@ -62,7 +62,7 @@ func ToDeBruijn(namedAST AST.AST) AST.AST {
 			if index == domain.NodeNull {
 				index = free_var_id(id)
 			}
-			ctx.curIndex = index
+			ctx.indicies.Push(index)
 			fmt.Printf("%s -> %d\n", id, index)
 		case domain.NodeApplication:
 			break
@@ -79,8 +79,7 @@ func ToDeBruijn(namedAST AST.AST) AST.AST {
 		node := ast.Node(node_id)
 		switch node.Tag {
 		case domain.NodeNamedVariable:
-			index := ctx.curIndex
-			ctx.curIndex = domain.NodeNull
+			index := ctx.indicies.ForcePop()
 			new_node(domain.NodeConstructor[domain.NodeIndexVariable](node.Token, index, node.Rhs))
 		case domain.NodeApplication:
 			new_node(domain.NodeConstructor[node.Tag](node.Token, node.Lhs, node.Rhs))
