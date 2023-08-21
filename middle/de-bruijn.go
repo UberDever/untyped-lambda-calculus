@@ -1,7 +1,8 @@
 package middle
 
 import (
-	"lambda/ast"
+	"fmt"
+	AST "lambda/ast"
 	"lambda/domain"
 	"lambda/util"
 )
@@ -9,11 +10,14 @@ import (
 type deBruijnContext struct {
 	abstraction_vars  util.Stack[string]
 	free_vars_context map[string]int
+	curIndex          domain.NodeId
 }
 
-func ToDeBruijn(namedAST ast.AST) (deBruijn ast.AST) {
+func ToDeBruijn(namedAST AST.AST) AST.AST {
 	ctx := deBruijnContext{
+		abstraction_vars:  util.NewStack[string](),
 		free_vars_context: make(map[string]int),
+		curIndex:          domain.NodeNull,
 	}
 
 	abs_var_id := func(variable string) domain.NodeId {
@@ -43,7 +47,13 @@ func ToDeBruijn(namedAST ast.AST) (deBruijn ast.AST) {
 		return domain.NodeId(free_id)
 	}
 
-	onEnter := func(ast *ast.AST, node_id domain.NodeId) {
+	nodes := make([]domain.Node, 0)
+	new_node := func(node domain.Node) domain.NodeId {
+		nodes = append(nodes, node)
+		return domain.NodeId(len(nodes) - 1)
+	}
+
+	onEnter := func(ast *AST.AST, node_id domain.NodeId) {
 		node := ast.Node(node_id)
 		switch node.Tag {
 		case domain.NodeNamedVariable:
@@ -52,8 +62,10 @@ func ToDeBruijn(namedAST ast.AST) (deBruijn ast.AST) {
 			if index == domain.NodeNull {
 				index = free_var_id(id)
 			}
-
+			ctx.curIndex = index
+			fmt.Printf("%s -> %d\n", id, index)
 		case domain.NodeApplication:
+			break
 		case domain.NodeAbstraction:
 			n := ast.AbstractionNode(node)
 			id := ast.SourceCode().Lexeme(domain.TokenId(n.Bound))
@@ -63,12 +75,18 @@ func ToDeBruijn(namedAST ast.AST) (deBruijn ast.AST) {
 		}
 	}
 
-	onExit := func(ast *ast.AST, node_id domain.NodeId) {
+	onExit := func(ast *AST.AST, node_id domain.NodeId) {
 		node := ast.Node(node_id)
 		switch node.Tag {
 		case domain.NodeNamedVariable:
+			index := ctx.curIndex
+			ctx.curIndex = domain.NodeNull
+			new_node(domain.NodeConstructor[domain.NodeIndexVariable](node.Token, index, node.Rhs))
 		case domain.NodeApplication:
+			new_node(domain.NodeConstructor[node.Tag](node.Token, node.Lhs, node.Rhs))
 		case domain.NodeAbstraction:
+			body := ast.AbstractionNode(node).Body
+			new_node(domain.NodeConstructor[domain.NodePureAbstraction](node.Token, body, domain.NodeNull))
 			ctx.abstraction_vars.Pop()
 		default:
 			panic("Unreachable")
@@ -76,6 +94,8 @@ func ToDeBruijn(namedAST ast.AST) (deBruijn ast.AST) {
 	}
 
 	namedAST.TraversePreorder(onEnter, onExit)
+	root := domain.NodeId(len(nodes) - 1)
 
-	return namedAST
+	// return namedAST
+	return AST.NewAST(namedAST.SourceCode(), root, nodes)
 }

@@ -14,6 +14,7 @@ const (
 	NodeApplication
 	NodeAbstraction
 	NodeIndexVariable
+	NodePureAbstraction
 	NodeMax
 )
 
@@ -63,9 +64,19 @@ func NewIndexVariableNode(token TokenId, lhs, rhs NodeId) Node {
 	}
 }
 
+func NewPureAbstractionNode(token TokenId, lhs, rhs NodeId) Node {
+	return Node{
+		Tag:   NodePureAbstraction,
+		Token: token,
+		Lhs:   lhs,
+		Rhs:   rhs,
+	}
+}
+
 var NodeConstructor = [...]func(TokenId, NodeId, NodeId) Node{
-	NodeNamedVariable: NewNamedVariableNode,
-	NodeApplication:   NewApplicationNode,
-	NodeAbstraction:   NewAbstractionNode,
-	NodeIndexVariable: NewIndexVariableNode,
+	NodeNamedVariable:   NewNamedVariableNode,
+	NodeApplication:     NewApplicationNode,
+	NodeAbstraction:     NewAbstractionNode,
+	NodeIndexVariable:   NewIndexVariableNode,
+	NodePureAbstraction: NewPureAbstractionNode,
 }

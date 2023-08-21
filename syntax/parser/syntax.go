@@ -241,13 +241,12 @@ func (p *parser) parse_let_binding() domain.NodeId {
 
 	token := p.current
 	p.expect(domain.TokenIdentifier, "let")
-	// TODO: variable here
-	p.next()
+	bound := p.parse_variable()
 	p.expect(domain.TokenIdentifier, "=")
 	value := p.parse_term()
 	p.expect(domain.TokenIdentifier, "in")
 	expr := p.parse_term()
 
-	absraction := p.new_node(domain.NodeConstructor[domain.NodeAbstraction](token, expr, domain.NodeNull))
+	absraction := p.new_node(domain.NodeConstructor[domain.NodeAbstraction](token, bound, expr))
 	return p.new_node(domain.NodeConstructor[domain.NodeApplication](token, absraction, value))
 }

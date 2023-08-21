@@ -67,18 +67,35 @@ func (ast AST) traversePreorder(onEnter, onExit NodeAction, id domain.NodeId) {
 	ast.traversePreorder(onEnter, onExit, rhs)
 }
 
+func (ast AST) TraversePostorder(onEnter NodeAction) {
+	ast.traversePostorder(onEnter, ast.root)
+}
+
+func (ast AST) traversePostorder(onEnter NodeAction, id domain.NodeId) {
+	if id == domain.NodeNull {
+		return
+	}
+	n := ast.Node(id)
+	lhs, rhs := NodeChildren[n.Tag](&ast, id)
+	ast.traversePostorder(onEnter, lhs)
+	ast.traversePostorder(onEnter, rhs)
+	onEnter(&ast, id)
+}
+
 var NodeChildren = [...]func(*AST, domain.NodeId) (domain.NodeId, domain.NodeId){
-	domain.NodeNamedVariable: NamedVariableNode_Children,
-	domain.NodeApplication:   ApplicationNode_Children,
-	domain.NodeAbstraction:   AbstractionNode_Children,
-	domain.NodeIndexVariable: IndexVariableNode_Children,
+	domain.NodeNamedVariable:   NamedVariableNode_Children,
+	domain.NodeApplication:     ApplicationNode_Children,
+	domain.NodeAbstraction:     AbstractionNode_Children,
+	domain.NodeIndexVariable:   IndexVariableNode_Children,
+	domain.NodePureAbstraction: PureAbstractionNode_Children,
 }
 
 var NodeString = [...]func(*AST, domain.NodeId) string{
-	domain.NodeNamedVariable: NamedVariableNode_String,
-	domain.NodeApplication:   ApplicationNode_String,
-	domain.NodeAbstraction:   AbstractionNode_String,
-	domain.NodeIndexVariable: IndexVariableNode_String,
+	domain.NodeNamedVariable:   NamedVariableNode_String,
+	domain.NodeApplication:     ApplicationNode_String,
+	domain.NodeAbstraction:     AbstractionNode_String,
+	domain.NodeIndexVariable:   IndexVariableNode_String,
+	domain.NodePureAbstraction: PureAbstractionNode_String,
 }
 
 type NamedVariableNode struct {
@@ -152,4 +169,23 @@ func IndexVariableNode_Children(ast *AST, id domain.NodeId) (domain.NodeId, doma
 func IndexVariableNode_String(ast *AST, id domain.NodeId) string {
 	n := ast.IndexVariableNode(ast.nodes[id])
 	return fmt.Sprintf("%d", n.Index)
+}
+
+type PureAbstractionNode struct {
+	Body domain.NodeId
+}
+
+func (ast *AST) PureAbstractionNode(node domain.Node) PureAbstractionNode {
+	return PureAbstractionNode{
+		Body: node.Lhs,
+	}
+}
+
+func PureAbstractionNode_Children(ast *AST, id domain.NodeId) (domain.NodeId, domain.NodeId) {
+	n := ast.PureAbstractionNode(ast.nodes[id])
+	return n.Body, domain.NodeNull
+}
+
+func PureAbstractionNode_String(ast *AST, id domain.NodeId) string {
+	return "λ"
 }
