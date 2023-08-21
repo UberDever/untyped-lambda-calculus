@@ -10,9 +10,10 @@ const NodeInvalid NodeId = math.MinInt
 const NodeNull NodeId = -1
 
 const (
-	NodeVariable NodeId = iota
+	NodeNamedVariable NodeId = iota
 	NodeApplication
 	NodeAbstraction
+	NodeIndexVariable
 	NodeMax
 )
 
@@ -26,9 +27,9 @@ func NewNodeInvalid() Node {
 	return Node{Tag: NodeInvalid, Token: TokenInvalid, Lhs: NodeInvalid, Rhs: NodeInvalid}
 }
 
-func NewVariableNode(token TokenId, lhs, rhs NodeId) Node {
+func NewNamedVariableNode(token TokenId, lhs, rhs NodeId) Node {
 	return Node{
-		Tag:   NodeVariable,
+		Tag:   NodeNamedVariable,
 		Token: token,
 		Lhs:   lhs,
 		Rhs:   rhs,
@@ -53,8 +54,18 @@ func NewAbstractionNode(token TokenId, lhs, rhs NodeId) Node {
 	}
 }
 
+func NewIndexVariableNode(token TokenId, lhs, rhs NodeId) Node {
+	return Node{
+		Tag:   NodeIndexVariable,
+		Token: token,
+		Lhs:   lhs,
+		Rhs:   rhs,
+	}
+}
+
 var NodeConstructor = [...]func(TokenId, NodeId, NodeId) Node{
-	NodeVariable:    NewVariableNode,
-	NodeApplication: NewApplicationNode,
-	NodeAbstraction: NewAbstractionNode,
+	NodeNamedVariable: NewNamedVariableNode,
+	NodeApplication:   NewApplicationNode,
+	NodeAbstraction:   NewAbstractionNode,
+	NodeIndexVariable: NewIndexVariableNode,
 }

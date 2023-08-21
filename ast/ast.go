@@ -25,7 +25,7 @@ func (ast AST) Print() string {
 	str := strings.Builder{}
 	onEnter := func(ast *AST, id domain.NodeId) {
 		node := ast.Node(id)
-		if node.Tag != domain.NodeVariable {
+		if node.Tag != domain.NodeIndexVariable {
 			str.WriteByte('(')
 		} else {
 			str.WriteByte(' ')
@@ -34,7 +34,7 @@ func (ast AST) Print() string {
 	}
 	onExit := func(ast *AST, id domain.NodeId) {
 		node := ast.Node(id)
-		if node.Tag != domain.NodeVariable {
+		if node.Tag != domain.NodeIndexVariable {
 			str.WriteByte(')')
 		}
 	}
@@ -62,32 +62,34 @@ func (ast AST) traversePreorder(onEnter, onExit NodeAction, id domain.NodeId) {
 }
 
 var NodeChildren = [...]func(*AST, domain.NodeId) (domain.NodeId, domain.NodeId){
-	domain.NodeVariable:    VariableNode_Children,
-	domain.NodeApplication: ApplicationNode_Children,
-	domain.NodeAbstraction: AbstractionNode_Children,
+	domain.NodeNamedVariable: NamedVariableNode_Children,
+	domain.NodeApplication:   ApplicationNode_Children,
+	domain.NodeAbstraction:   AbstractionNode_Children,
+	domain.NodeIndexVariable: IndexVariableNode_Children,
 }
 
 var NodeString = [...]func(*AST, domain.NodeId) string{
-	domain.NodeVariable:    VariableNode_String,
-	domain.NodeApplication: ApplicationNode_String,
-	domain.NodeAbstraction: AbstractionNode_String,
+	domain.NodeNamedVariable: NamedVariableNode_String,
+	domain.NodeApplication:   ApplicationNode_String,
+	domain.NodeAbstraction:   AbstractionNode_String,
+	domain.NodeIndexVariable: IndexVariableNode_String,
 }
 
-type VariableNode struct {
-	Index int
+type NamedVariableNode struct {
+	Name string
 }
 
-func (ast *AST) VariableNode(node domain.Node) VariableNode {
-	return VariableNode{Index: int(node.Lhs)}
+func (ast *AST) NamedVariableNode(node domain.Node) NamedVariableNode {
+	return NamedVariableNode{Name: ast.src.Lexeme(domain.TokenId(node.Lhs))}
 }
 
-func VariableNode_Children(ast *AST, id domain.NodeId) (domain.NodeId, domain.NodeId) {
+func NamedVariableNode_Children(ast *AST, id domain.NodeId) (domain.NodeId, domain.NodeId) {
 	return domain.NodeNull, domain.NodeNull
 }
 
-func VariableNode_String(ast *AST, id domain.NodeId) string {
-	n := ast.VariableNode(ast.nodes[id])
-	return fmt.Sprintf("%d", n.Index)
+func NamedVariableNode_String(ast *AST, id domain.NodeId) string {
+	n := ast.NamedVariableNode(ast.nodes[id])
+	return n.Name
 }
 
 type ApplicationNode struct {
@@ -126,4 +128,21 @@ func AbstractionNode_Children(ast *AST, id domain.NodeId) (domain.NodeId, domain
 
 func AbstractionNode_String(ast *AST, id domain.NodeId) string {
 	return "λ"
+}
+
+type IndexVariableNode struct {
+	Index int
+}
+
+func (ast *AST) IndexVariableNode(node domain.Node) IndexVariableNode {
+	return IndexVariableNode{Index: int(node.Lhs)}
+}
+
+func IndexVariableNode_Children(ast *AST, id domain.NodeId) (domain.NodeId, domain.NodeId) {
+	return domain.NodeNull, domain.NodeNull
+}
+
+func IndexVariableNode_String(ast *AST, id domain.NodeId) string {
+	n := ast.IndexVariableNode(ast.nodes[id])
+	return fmt.Sprintf("%d", n.Index)
 }

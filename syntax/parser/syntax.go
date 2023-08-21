@@ -231,7 +231,7 @@ func (p *parser) parse_variable() domain.NodeId {
 		return domain.NodeId(free_id)
 	}
 
-	tag = domain.NodeVariable
+	tag = domain.NodeIndexVariable
 	token = p.current
 	identifier := p.src.Lexeme(token)
 	if identifier == "let" {

@@ -19,14 +19,18 @@ Also use [slides](https://www.cs.vu.nl/~femke/courses/ep/slides/4x4.pdf)
     ```
         let <id> = <expr> in <expr>
     ```
-    * Expand on that form further, allowing for
-    ```
-        let <id1> = <expr1>[;\n] <id2> = <expr2>... in <expr>
-    ```
     * Note that any such binding can be rewritten as application of abstraction to bound value
     ```
         let a = 5 in ((λf.f a) (λn.n)) => (λa.((λf.f a) (λn.n)) 5)
     ```
+- [ ] Lexical binding decisions (pick second):
+    * Make lexical rewrite on tokenizing stage, replacing `let` and stuff with just applications and abstractions:
+        - `let` is effectively macro
+        - Need to report syntax error on this stage properly (seems hard)
+    * Make multiple AST forms, utilizing untyped `ast node`
+        - Seems more consistent with the rest of the interpreter
+        - Final target for interpretation - form with `De bruijn` indices
+        - Need to include `De bruijn conversion` after parser, and parser no longer deals with indices (good thing)
 - [ ] Make std lib including all standard abstractions for sane programming from [here](https://www.lektorium.tv/sites/lektorium.tv/files/additional_files/20110227_systems_of_typed_lambda_calculi_moskvin_lecture02.pdf)
     * Booleans
     * Numbers
