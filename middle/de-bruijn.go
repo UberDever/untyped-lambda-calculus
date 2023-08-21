@@ -11,6 +11,7 @@ type deBruijnContext struct {
 	abstraction_vars  util.Stack[string]
 	free_vars_context map[string]int
 	indicies          util.Stack[domain.NodeId]
+	next_var_bound    bool
 }
 
 func ToDeBruijn(namedAST AST.AST) AST.AST {
@@ -58,6 +59,10 @@ func ToDeBruijn(namedAST AST.AST) AST.AST {
 		switch node.Tag {
 		case domain.NodeNamedVariable:
 			id := ast.NamedVariableNode(node).Name
+			if ctx.next_var_bound {
+				ctx.abstraction_vars.Push(id)
+				ctx.next_var_bound = false
+			}
 			index := abs_var_id(id)
 			if index == domain.NodeNull {
 				index = free_var_id(id)
@@ -67,9 +72,7 @@ func ToDeBruijn(namedAST AST.AST) AST.AST {
 		case domain.NodeApplication:
 			break
 		case domain.NodeAbstraction:
-			n := ast.AbstractionNode(node)
-			id := ast.SourceCode().Lexeme(domain.TokenId(n.Bound))
-			ctx.abstraction_vars.Push(id)
+			ctx.next_var_bound = true
 		default:
 			panic("Unreachable")
 		}
