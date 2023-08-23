@@ -234,10 +234,11 @@ func indent(sexpr string, indentWidth, maxScreenLimit, maxLineLen int) string {
 
 		curDepth := -1
 		for i := 0; i < len(sexpr); i++ {
-			if sexpr[i] == '(' {
+			switch sexpr[i] {
+			case '(':
 				openParens.Push(i)
 				curDepth++
-			} else if sexpr[i] == ')' {
+			case ')':
 				begin := openParens.ForcePop()
 				end := i
 				openToClosed[begin] = struct{ closing, depth int }{end, curDepth}
@@ -286,7 +287,6 @@ func indent(sexpr string, indentWidth, maxScreenLimit, maxLineLen int) string {
 			if curIndex < len(positions) {
 				pos = positions[curIndex]
 			}
-			continue
 		}
 		s.WriteRune(c)
 	}

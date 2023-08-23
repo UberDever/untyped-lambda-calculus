@@ -130,7 +130,6 @@ func ApplicationNode_Children(ast *AST, id domain.NodeId) (domain.NodeId, domain
 	return n.Lhs, n.Rhs
 }
 
-// BUG: If application node is empty, ast.Pretty doesn't print all open parens
 func ApplicationNode_String(ast *AST, id domain.NodeId) string {
 	return ""
 }
