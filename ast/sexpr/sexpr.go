@@ -1,5 +1,5 @@
 // Following implementation of s-expressions assumes that they are trees (acyclic graphs)
-package ast
+package sexpr
 
 import (
 	"fmt"

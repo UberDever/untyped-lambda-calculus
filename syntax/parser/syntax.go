@@ -2,19 +2,20 @@ package parser
 
 import (
 	"fmt"
-	"lambda/ast"
+	"lambda/ast/tree"
 	"lambda/domain"
 	"lambda/syntax/source"
+	"lambda/util"
 	"unicode"
 
 	"golang.org/x/exp/utf8string"
 )
 
 type tokenizer struct {
-	logger *domain.Logger
+	logger *util.Logger
 }
 
-func NewTokenizer(logger *domain.Logger) tokenizer {
+func NewTokenizer(logger *util.Logger) tokenizer {
 	return tokenizer{logger: logger}
 }
 
@@ -100,7 +101,7 @@ type parser struct {
 	current   domain.TokenId
 	atEof     bool
 
-	logger *domain.Logger
+	logger *util.Logger
 }
 
 func (p *parser) next() {
@@ -124,7 +125,7 @@ func (p *parser) matchTag(tag domain.TokenId) bool {
 func (p *parser) expect(tag domain.TokenId, lexeme string) (ok bool) {
 	report_error := func(expected, got string, line, col int) {
 		message := fmt.Sprintf("\nExpected\n %s but got\n %s", expected, got)
-		p.logger.Add(domain.NewMessage(domain.Fatal, line, col, p.src.Filename(), message))
+		p.logger.Add(util.NewMessage(util.Fatal, line, col, p.src.Filename(), message))
 	}
 
 	expected := p.src.TraceToken(tag, lexeme, int(domain.TokenEof), int(domain.TokenEof))
@@ -152,13 +153,13 @@ func (p *parser) new_node(node domain.Node) domain.NodeId {
 	return domain.NodeId(len(p.ast_nodes) - 1)
 }
 
-func NewParser(logger *domain.Logger) parser {
+func NewParser(logger *util.Logger) parser {
 	return parser{
 		logger: logger,
 	}
 }
 
-func (p *parser) Parse(src *source.SourceCode) ast.AST {
+func (p *parser) Parse(src *source.SourceCode) tree.Tree {
 	p.src = src
 
 	root := p.parse_term()
@@ -166,9 +167,9 @@ func (p *parser) Parse(src *source.SourceCode) ast.AST {
 		message := "Unexpected EOF"
 		// NOTE: line and column values here are handy to reporting, but I have removed them
 		// from parser implementation, don't remember why
-		p.logger.Add(domain.NewMessage(domain.Fatal, -1, -1, p.src.Filename(), message))
+		p.logger.Add(util.NewMessage(util.Fatal, -1, -1, p.src.Filename(), message))
 	}
-	return ast.NewAST(src, root, p.ast_nodes)
+	return tree.NewTree(root, p.ast_nodes)
 }
 
 func (p *parser) parse_term() domain.NodeId {
@@ -206,11 +207,13 @@ func (p *parser) parse_variable() domain.NodeId {
 		return p.parse_let_binding()
 	}
 
-	lhs = domain.NodeId(token)
-	rhs = domain.NodeNull
 	p.next()
 
-	return p.new_node(domain.NodeConstructor[tag](token, lhs, rhs))
+	return p.new_node(domain.Node{
+		Tag:   tag,
+		Token: token,
+		Lhs:   lhs,
+		Rhs:   rhs})
 }
 
 func (p *parser) parse_application() domain.NodeId {
@@ -221,7 +224,11 @@ func (p *parser) parse_application() domain.NodeId {
 	lhs = p.parse_term()
 	rhs = p.parse_term()
 
-	return p.new_node(domain.NodeConstructor[tag](token, lhs, rhs))
+	return p.new_node(domain.Node{
+		Tag:   tag,
+		Token: token,
+		Lhs:   lhs,
+		Rhs:   rhs})
 }
 
 func (p *parser) parse_abstraction() domain.NodeId {
@@ -234,7 +241,11 @@ func (p *parser) parse_abstraction() domain.NodeId {
 	p.expect(domain.TokenDot, "")
 	rhs = p.parse_term()
 
-	return p.new_node(domain.NodeConstructor[tag](token, lhs, rhs))
+	return p.new_node(domain.Node{
+		Tag:   tag,
+		Token: token,
+		Lhs:   lhs,
+		Rhs:   rhs})
 }
 
 func (p *parser) parse_let_binding() domain.NodeId {
@@ -247,6 +258,15 @@ func (p *parser) parse_let_binding() domain.NodeId {
 	p.expect(domain.TokenIdentifier, "in")
 	expr := p.parse_term()
 
-	absraction := p.new_node(domain.NodeConstructor[domain.NodeAbstraction](token, bound, expr))
-	return p.new_node(domain.NodeConstructor[domain.NodeApplication](token, absraction, value))
+	absraction := p.new_node(domain.Node{
+		Tag:   domain.NodeAbstraction,
+		Token: token,
+		Lhs:   bound,
+		Rhs:   expr})
+
+	return p.new_node(domain.Node{
+		Tag:   domain.NodeApplication,
+		Token: token,
+		Lhs:   absraction,
+		Rhs:   value})
 }

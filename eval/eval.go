@@ -2,20 +2,20 @@ package eval
 
 import (
 	"fmt"
-	"lambda/ast"
+	"lambda/ast/sexpr"
 	"lambda/domain"
 	"lambda/util"
 )
 
 type eval_context struct {
-	stack           util.Stack[ast.Sexpr]
+	stack           util.Stack[sexpr.Sexpr]
 	bound_variables util.Set[string]
 	free_variables  util.Set[string]
 }
 
 func NewEvalContext() eval_context {
 	return eval_context{
-		stack: util.NewStack[ast.Sexpr](),
+		stack: util.NewStack[sexpr.Sexpr](),
 		bound_variables: util.NewSet[string](func(lhs, rhs string) bool {
 			return lhs == rhs
 		}),
@@ -25,9 +25,9 @@ func NewEvalContext() eval_context {
 	}
 }
 
-func ToString(expr ast.Sexpr, pretty bool) string {
+func ToString(expr sexpr.Sexpr, pretty bool) string {
 	if expr.IsAtom() {
-		return ast.Pretty(expr.Print())
+		return sexpr.Pretty(expr.Print())
 	}
 
 	lambda_symbol := '\\'
@@ -55,14 +55,14 @@ func ToString(expr ast.Sexpr, pretty bool) string {
 			panic("unreachable")
 		}
 	}
-	onEnter := func(s ast.Sexpr) {
+	onEnter := func(s sexpr.Sexpr) {
 		if s.IsAtom() {
 			eval_stack.Push(s.Data())
 		} else {
 			eval()
 		}
 	}
-	ast.TraversePostorder(expr, onEnter)
+	sexpr.TraversePostorder(expr, onEnter)
 	eval()
 	return eval_stack.ForcePop().(string)
 }
@@ -75,8 +75,8 @@ func (c *eval_context) GetFree() util.Set[string] {
 	return c.free_variables
 }
 
-func (c *eval_context) Eval(expr ast.Sexpr) ast.Sexpr {
-	onEnter := func(s ast.Sexpr) {
+func (c *eval_context) Eval(expr sexpr.Sexpr) sexpr.Sexpr {
+	onEnter := func(s sexpr.Sexpr) {
 		if s.IsAtom() {
 			c.stack.Push(s)
 		} else {
@@ -84,7 +84,7 @@ func (c *eval_context) Eval(expr ast.Sexpr) ast.Sexpr {
 			c.eval()
 		}
 	}
-	ast.TraversePostorder(expr, onEnter)
+	sexpr.TraversePostorder(expr, onEnter)
 	fmt.Printf("%s %v\n", ToString(expr, true), c.bound_variables)
 	c.eval()
 	return c.stack.ForcePop()
@@ -96,7 +96,7 @@ func (c *eval_context) eval() {
 	switch tag {
 	case domain.NodeIndexVariable:
 		str := c.stack.ForcePop()
-		identifier := ast.S(
+		identifier := sexpr.S(
 			domain.NodeIndexVariable,
 			str,
 		)
@@ -107,7 +107,7 @@ func (c *eval_context) eval() {
 		rhs := c.stack.ForcePop()
 
 		rest := lhs
-		lhs_tag := domain.NodeId(ast.Car(rest).Data().(int))
+		lhs_tag := domain.NodeId(sexpr.Car(rest).Data().(int))
 		if lhs_tag == domain.NodeAbstraction {
 			// 	rest = ast.Cdr(rest)
 			// 	arg := ast.Car(rest)
@@ -115,7 +115,7 @@ func (c *eval_context) eval() {
 			// 	body := ast.Car(rest)
 			//             c.bound_variables()
 		} else {
-			application := ast.S(
+			application := sexpr.S(
 				domain.NodeApplication,
 				lhs, rhs,
 			)
@@ -124,11 +124,11 @@ func (c *eval_context) eval() {
 	case domain.NodeAbstraction:
 		arg := c.stack.ForcePop()
 		body := c.stack.ForcePop()
-		abstraction := ast.S(
+		abstraction := sexpr.S(
 			domain.NodeAbstraction,
 			arg, body,
 		)
-		name := ast.Car(ast.Cdr(arg))
+		name := sexpr.Car(sexpr.Cdr(arg))
 		str := name.Data().(string)
 		c.bound_variables.Add(str)
 		c.free_variables.Remove(str)
@@ -136,10 +136,6 @@ func (c *eval_context) eval() {
 	default:
 		panic("unreachable")
 	}
-}
-
-func (c *eval_context) alpha_conversion(arg ast.Sexpr, body ast.Sexpr) {
-
 }
 
 // func (c *eval_context) bound_variables(expr ast.Sexpr) {
