@@ -8,11 +8,18 @@ import (
 	"lambda/util"
 )
 
-func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) (root domain.NodeId, nodes []domain.Node) {
+type DeBruijnResult struct {
+	root           domain.NodeId
+	nodes          []domain.Node
+	variable_names []string
+}
+
+func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) DeBruijnResult {
 	abstraction_vars := util.NewStack[string]()
 	free_vars_context := make(map[string]int)
 	indicies := util.NewStack[domain.NodeId]()
 	node_ids := util.NewStack[domain.NodeId]()
+	variable_names := make([]string, 0, 8)
 
 	abs_var_id := func(variable string) domain.NodeId {
 		vars := abstraction_vars.Values()
@@ -41,7 +48,7 @@ func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) (roo
 		return domain.NodeId(free_id)
 	}
 
-	nodes = make([]domain.Node, 0)
+	nodes := make([]domain.Node, 0)
 	add_node := func(node domain.Node) domain.NodeId {
 		nodes = append(nodes, node)
 		return domain.NodeId(len(nodes) - 1)
@@ -57,6 +64,7 @@ func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) (roo
 			if index == domain.NodeNull {
 				index = free_var_id(id)
 			}
+			variable_names = append(variable_names, id)
 			indicies.Push(index)
 		case domain.NodeApplication:
 			break
@@ -76,11 +84,12 @@ func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) (roo
 		switch node.Tag {
 		case domain.NodeNamedVariable:
 			index := indicies.ForcePop()
+			name_index := domain.NodeId(len(variable_names) - 1)
 			id := add_node(domain.Node{
 				Tag:   domain.NodeIndexVariable,
 				Token: token,
 				Lhs:   index,
-				Rhs:   domain.NodeNull})
+				Rhs:   name_index})
 			node_ids.Push(id)
 		case domain.NodeApplication:
 			rhs := node_ids.ForcePop()
@@ -107,7 +116,11 @@ func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) (roo
 	}
 
 	ast.TraversePreorder(source_code, tree_with_names, onEnter, onExit)
-	root = domain.NodeId(len(nodes) - 1)
+	root := domain.NodeId(len(nodes) - 1)
 
-	return root, nodes
+	return DeBruijnResult{
+		root:           root,
+		nodes:          nodes,
+		variable_names: variable_names,
+	}
 }

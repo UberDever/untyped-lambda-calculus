@@ -40,11 +40,11 @@ func testAstEquality(text, expected string) error {
 	parser := parser.NewParser(&logger)
 	namedTree := parser.Parse(&source_code)
 
-	root, nodes := ToDeBruijn(&source_code, &namedTree)
+	result := ToDeBruijn(&source_code, &namedTree)
 	if !logger.IsEmpty() {
 		return report_errors(&logger)
 	}
-	de_bruijn_tree := tree.NewTree(root, nodes)
+	de_bruijn_tree := tree.NewTree(result.root, result.nodes)
 
 	got := ast.Print(&source_code, &de_bruijn_tree)
 	if sexpr.Minified(got) != sexpr.Minified(expected) {

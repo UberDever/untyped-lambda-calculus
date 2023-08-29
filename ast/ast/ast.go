@@ -30,29 +30,29 @@ func NewINode(src *source.SourceCode, tree *tree.Tree, node domain.Node) INode {
 }
 
 type named_variable_node struct {
-	domain.Node
+	n    domain.Node
 	Name string
 }
 
 type application_node struct {
-	domain.Node
+	n domain.Node
 }
 
 type abstraction_node struct {
-	domain.Node
+	n domain.Node
 }
 
 type index_variable_node struct {
-	domain.Node
+	n domain.Node
 }
 
 type pure_abstraction_node struct {
-	domain.Node
+	n domain.Node
 }
 
 func NewNamedVariableNode(src *source.SourceCode, tree *tree.Tree, node domain.Node) named_variable_node {
 	return named_variable_node{
-		Node: node,
+		n:    node,
 		Name: src.Lexeme(node.Token),
 	}
 }
@@ -67,7 +67,7 @@ func (n named_variable_node) Children() (domain.NodeId, domain.NodeId) {
 
 func NewApplicationNode(src *source.SourceCode, tree *tree.Tree, node domain.Node) application_node {
 	return application_node{
-		Node: node,
+		n: node,
 	}
 }
 
@@ -80,16 +80,16 @@ func (n application_node) Children() (domain.NodeId, domain.NodeId) {
 }
 
 func (n application_node) Lhs() domain.NodeId {
-	return n.Node.Lhs
+	return n.n.Lhs
 }
 
 func (n application_node) Rhs() domain.NodeId {
-	return n.Node.Rhs
+	return n.n.Rhs
 }
 
 func NewAbstractionNode(src *source.SourceCode, tree *tree.Tree, node domain.Node) abstraction_node {
 	return abstraction_node{
-		Node: node,
+		n: node,
 	}
 }
 
@@ -102,21 +102,21 @@ func (n abstraction_node) Children() (domain.NodeId, domain.NodeId) {
 }
 
 func (n abstraction_node) Bound() domain.NodeId {
-	return n.Lhs
+	return n.n.Lhs
 }
 
 func (n abstraction_node) Body() domain.NodeId {
-	return n.Rhs
+	return n.n.Rhs
 }
 
 func NewIndexVariableNode(src *source.SourceCode, tree *tree.Tree, node domain.Node) index_variable_node {
 	return index_variable_node{
-		Node: node,
+		n: node,
 	}
 }
 
 func (n index_variable_node) String() string {
-	return fmt.Sprintf("%d", n.Lhs)
+	return fmt.Sprintf("%d", n.n.Lhs)
 }
 
 func (n index_variable_node) Children() (domain.NodeId, domain.NodeId) {
@@ -124,12 +124,16 @@ func (n index_variable_node) Children() (domain.NodeId, domain.NodeId) {
 }
 
 func (n index_variable_node) Index() int {
-	return int(n.Lhs)
+	return int(n.n.Lhs)
+}
+
+func (n index_variable_node) NameIndex() int {
+	return int(n.n.Rhs)
 }
 
 func NewPureAbstractionNode(src *source.SourceCode, tree *tree.Tree, node domain.Node) pure_abstraction_node {
 	return pure_abstraction_node{
-		Node: node,
+		n: node,
 	}
 }
 
@@ -142,7 +146,7 @@ func (n pure_abstraction_node) Children() (domain.NodeId, domain.NodeId) {
 }
 
 func (n pure_abstraction_node) Body() domain.NodeId {
-	return n.Lhs
+	return n.n.Lhs
 }
 
 type NodeAction = func(*tree.Tree, domain.NodeId)
