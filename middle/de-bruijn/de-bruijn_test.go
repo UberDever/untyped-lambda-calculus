@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"lambda/ast/ast"
 	"lambda/ast/sexpr"
-	"lambda/ast/tree"
 	"lambda/syntax/parser"
 	"lambda/util"
 	"strings"
@@ -44,7 +43,7 @@ func testAstEquality(text, expected string) error {
 	if !logger.IsEmpty() {
 		return report_errors(&logger)
 	}
-	de_bruijn_tree := tree.NewTree(result.root, result.nodes)
+	de_bruijn_tree := result.Tree
 
 	got := ast.Print(&source_code, &de_bruijn_tree)
 	if sexpr.Minified(got) != sexpr.Minified(expected) {

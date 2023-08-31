@@ -9,9 +9,8 @@ import (
 )
 
 type DeBruijnResult struct {
-	root           domain.NodeId
-	nodes          []domain.Node
-	variable_names []string
+	Tree          tree.Tree
+	VariableNames []string
 }
 
 func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) DeBruijnResult {
@@ -119,8 +118,7 @@ func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) DeBr
 	root := domain.NodeId(len(nodes) - 1)
 
 	return DeBruijnResult{
-		root:           root,
-		nodes:          nodes,
-		variable_names: variable_names,
+		Tree:          tree.NewTree(root, nodes),
+		VariableNames: variable_names,
 	}
 }

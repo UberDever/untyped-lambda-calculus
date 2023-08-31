@@ -1,37 +1,60 @@
 package eval
 
-// func parse_tree(text string) (tree ast.Sexpr, err error) {
-// 	report_errors := func(logger *domain.Logger) error {
-// 		builder := strings.Builder{}
-// 		for {
-// 			m, ok := logger.Next()
-// 			if !ok {
-// 				break
-// 			}
-// 			builder.WriteString(m.String())
-// 			builder.WriteByte('\n')
-// 		}
-// 		return errors.New(builder.String())
-// 	}
-//
-// 	src := utf8string.NewString(text)
-// 	logger := domain.NewLogger()
-//
-// 	tokenizer := parser.NewTokenizer(&logger)
-// 	source_code := tokenizer.Tokenize("test", *src)
-// 	if !logger.IsEmpty() {
-// 		err = report_errors(&logger)
-// 		return
-// 	}
-//
-// 	p := parser.NewParser(&logger)
-// 	tree = p.Parse(&source_code)
-// 	if !logger.IsEmpty() {
-// 		err = report_errors(&logger)
-// 		return
-// 	}
-// 	return
-// }
+import (
+	"errors"
+	"fmt"
+	"lambda/ast/ast"
+	"lambda/ast/sexpr"
+	debruijn "lambda/middle/de-bruijn"
+	"lambda/syntax/parser"
+	"lambda/util"
+	"strings"
+
+	"golang.org/x/exp/utf8string"
+)
+
+func testEvalEquality(text, expected string) error {
+	report_errors := func(logger *util.Logger) error {
+		builder := strings.Builder{}
+		for {
+			m, ok := logger.Next()
+			if !ok {
+				break
+			}
+			builder.WriteString(m.String())
+			builder.WriteByte('\n')
+		}
+		return errors.New(builder.String())
+	}
+
+	source := utf8string.NewString(text)
+	logger := util.NewLogger()
+
+	tokenizer := parser.NewTokenizer(&logger)
+	source_code := tokenizer.Tokenize("test", *source)
+	if !logger.IsEmpty() {
+		return report_errors(&logger)
+	}
+
+	parser := parser.NewParser(&logger)
+	namedTree := parser.Parse(&source_code)
+
+	result := debruijn.ToDeBruijn(&source_code, &namedTree)
+	if !logger.IsEmpty() {
+		return report_errors(&logger)
+	}
+	de_bruijn_tree := result.Tree
+
+	got := ast.Print(&source_code, &de_bruijn_tree)
+	if sexpr.Minified(got) != sexpr.Minified(expected) {
+		lhs := sexpr.Pretty(got)
+		rhs := sexpr.Pretty(expected)
+		trace := util.ConcatVertically(lhs, rhs)
+		return fmt.Errorf("AST are not equal\n%s", trace)
+	}
+	return nil
+}
+
 //
 // func testEvalEquality(text, expected string) error {
 // 	tree, err := parse_tree(text)
