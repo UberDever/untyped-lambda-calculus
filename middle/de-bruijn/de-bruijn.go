@@ -67,7 +67,7 @@ func ToDeBruijn(source_code source.SourceCode, tree_with_names tree.Tree) DeBrui
 		case tree.NodeApplication:
 			break
 		case tree.NodeAbstraction:
-			typed_node := ast.ToAbstractionNode(source_code, t, node)
+			typed_node := ast.ToAbstractionNode(t, node)
 			bound := t.Node(typed_node.Bound())
 			bound_node := ast.ToNamedVariableNode(source_code, t, bound)
 			abstraction_vars.Push(bound_node.Name)
@@ -113,7 +113,7 @@ func ToDeBruijn(source_code source.SourceCode, tree_with_names tree.Tree) DeBrui
 		}
 	}
 
-	ast.TraversePreorder(source_code, tree_with_names, onEnter, onExit)
+	ast.TraversePreorder(tree_with_names, onEnter, onExit)
 	root := tree.NodeId(len(nodes) - 1)
 
 	return DeBruijnResult{

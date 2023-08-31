@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"lambda/ast/ast"
 	"lambda/ast/sexpr"
+	"lambda/ast/tree"
 	"lambda/syntax/parser"
 	"lambda/util"
 	"strings"
@@ -44,6 +45,18 @@ func testAstEquality(text, expected string) error {
 
 	result := ToDeBruijn(source_code, namedTree)
 	de_bruijn_tree := result.Tree
+
+	// test invariants
+	for i := 0; i < de_bruijn_tree.Count(); i++ {
+		n := de_bruijn_tree.Node(tree.NodeId(i))
+		switch n.Tag {
+		case tree.NodeIndexVariable:
+		case tree.NodePureAbstraction:
+		case tree.NodeApplication:
+		default:
+			return fmt.Errorf("Encountered incorrect node with tag %d at %d", n.Tag, i)
+		}
+	}
 
 	got := ast.Print(source_code, de_bruijn_tree)
 	if sexpr.Minified(got) != sexpr.Minified(expected) {

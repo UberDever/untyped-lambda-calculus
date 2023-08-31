@@ -38,6 +38,10 @@ func NewTree(root NodeId, nodes []Node) Tree {
 	return Tree{root: root, nodes: nodes}
 }
 
+func (t Tree) Count() int {
+	return len(t.nodes)
+}
+
 func (t Tree) Node(id NodeId) Node {
 	return t.nodes[int(id)]
 }
@@ -74,6 +78,10 @@ func (t *MutableTree) SetNode(id NodeId, node Node) {
 	t.nodes[int(id)] = node
 }
 
-func (t *MutableTree) Count() int {
-	return len(t.nodes)
+func (t *MutableTree) SetNodes(nodes []Node) {
+	t.nodes = nodes
+}
+
+func (t *MutableTree) Nodes() []Node {
+	return t.nodes
 }

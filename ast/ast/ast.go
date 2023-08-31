@@ -7,23 +7,38 @@ import (
 	"strings"
 )
 
-type INode interface {
-	String() string
+type NodeIterable interface {
 	Children() (tree.NodeId, tree.NodeId)
 }
 
-func NewINode(src source.SourceCode, t tree.Tree, node tree.Node) INode {
+func NewNodeIterable(node tree.Node) NodeIterable {
+	switch node.Tag {
+	case tree.NodeNamedVariable:
+		return named_variable_node{n: node}
+	case tree.NodeApplication:
+		return application_node{n: node}
+	case tree.NodeAbstraction:
+		return abstraction_node{n: node}
+	case tree.NodeIndexVariable:
+		return index_variable_node{n: node}
+	case tree.NodePureAbstraction:
+		return pure_abstraction_node{n: node}
+	}
+	panic("Unreachable")
+}
+
+func NewNodeStringer(src source.SourceCode, t tree.Tree, node tree.Node) fmt.Stringer {
 	switch node.Tag {
 	case tree.NodeNamedVariable:
 		return ToNamedVariableNode(src, t, node)
 	case tree.NodeApplication:
-		return ToApplicationNode(src, t, node)
+		return ToApplicationNode(t, node)
 	case tree.NodeAbstraction:
-		return ToAbstractionNode(src, t, node)
+		return ToAbstractionNode(t, node)
 	case tree.NodeIndexVariable:
-		return ToIndexVariableNode(src, t, node)
+		return ToIndexVariableNode(t, node)
 	case tree.NodePureAbstraction:
-		return ToPureAbstractionNode(src, t, node)
+		return ToPureAbstractionNode(t, node)
 	}
 	panic("Unreachable")
 }
@@ -64,7 +79,7 @@ func (n named_variable_node) Children() (tree.NodeId, tree.NodeId) {
 	return tree.NodeNull, tree.NodeNull
 }
 
-func ToApplicationNode(src source.SourceCode, tree tree.Tree, node tree.Node) application_node {
+func ToApplicationNode(tree tree.Tree, node tree.Node) application_node {
 	return application_node{
 		n: node,
 	}
@@ -86,7 +101,7 @@ func (n application_node) Rhs() tree.NodeId {
 	return n.n.Rhs
 }
 
-func ToAbstractionNode(src source.SourceCode, tree tree.Tree, node tree.Node) abstraction_node {
+func ToAbstractionNode(tree tree.Tree, node tree.Node) abstraction_node {
 	return abstraction_node{
 		n: node,
 	}
@@ -108,7 +123,7 @@ func (n abstraction_node) Body() tree.NodeId {
 	return n.n.Rhs
 }
 
-func ToIndexVariableNode(src source.SourceCode, tree tree.Tree, node tree.Node) index_variable_node {
+func ToIndexVariableNode(tree tree.Tree, node tree.Node) index_variable_node {
 	return index_variable_node{
 		n: node,
 	}
@@ -130,7 +145,7 @@ func (n index_variable_node) NameIndex() int {
 	return int(n.n.Rhs)
 }
 
-func ToPureAbstractionNode(src source.SourceCode, tree tree.Tree, node tree.Node) pure_abstraction_node {
+func ToPureAbstractionNode(tree tree.Tree, node tree.Node) pure_abstraction_node {
 	return pure_abstraction_node{
 		n: node,
 	}
@@ -150,35 +165,35 @@ func (n pure_abstraction_node) Body() tree.NodeId {
 
 type NodeAction = func(tree.Tree, tree.NodeId)
 
-func TraversePreorder(source_code source.SourceCode, tree tree.Tree, onEnter, onExit NodeAction) {
-	traversePreorder(source_code, tree, onEnter, onExit, tree.Root())
+func TraversePreorder(tree tree.Tree, onEnter, onExit NodeAction) {
+	traversePreorder(tree, onEnter, onExit, tree.RootId())
 }
 
-func traversePreorder(source_code source.SourceCode, t tree.Tree, onEnter, onExit NodeAction, id tree.NodeId) {
+func traversePreorder(t tree.Tree, onEnter, onExit NodeAction, id tree.NodeId) {
 	if id == tree.NodeNull {
 		return
 	}
 	onEnter(t, id)
 	defer onExit(t, id)
 	node := t.Node(id)
-	typed_node := NewINode(source_code, t, node)
-	lhs, rhs := typed_node.Children()
-	traversePreorder(source_code, t, onEnter, onExit, lhs)
-	traversePreorder(source_code, t, onEnter, onExit, rhs)
+	iterable_node := NewNodeIterable(node)
+	lhs, rhs := iterable_node.Children()
+	traversePreorder(t, onEnter, onExit, lhs)
+	traversePreorder(t, onEnter, onExit, rhs)
 }
 
 func Print(src source.SourceCode, in_tree tree.Tree) string {
 	str := strings.Builder{}
 	onEnter := func(t tree.Tree, id tree.NodeId) {
 		node := t.Node(id)
-		inode := NewINode(src, t, node)
+		stringer_node := NewNodeStringer(src, t, node)
 		if node.Tag != tree.NodeIndexVariable &&
 			node.Tag != tree.NodeNamedVariable {
 			str.WriteByte('(')
 		} else {
 			str.WriteByte(' ')
 		}
-		str.WriteString(inode.String())
+		str.WriteString(stringer_node.String())
 	}
 	onExit := func(t tree.Tree, id tree.NodeId) {
 		node := t.Node(id)
@@ -187,7 +202,7 @@ func Print(src source.SourceCode, in_tree tree.Tree) string {
 			str.WriteByte(')')
 		}
 	}
-	TraversePreorder(src, in_tree, onEnter, onExit)
+	TraversePreorder(in_tree, onEnter, onExit)
 
 	return str.String()
 }

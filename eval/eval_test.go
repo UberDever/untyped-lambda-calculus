@@ -46,7 +46,7 @@ func testEvalEquality(text, expected string) error {
 	result := debruijn.ToDeBruijn(source_code, namedTree)
 	de_bruijn_tree := result.Tree
 
-	eval_tree := Eval(source_code, de_bruijn_tree)
+	eval_tree := Eval(de_bruijn_tree)
 
 	got := ast.Print(source_code, eval_tree)
 	if sexpr.Minified(got) != sexpr.Minified(expected) {
@@ -92,6 +92,14 @@ func TestEvalNonRedex(test *testing.T) {
 func TestEvalSimpleRedex(test *testing.T) {
 	text := `((λx.x) y)`
 	expected := `0`
+	if e := testEvalEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+func TestEvalRedex1(test *testing.T) {
+	text := `((λu.λv.(u x)) y)`
+	expected := `(λ (2 1))`
 	if e := testEvalEquality(text, expected); e != nil {
 		test.Error(e)
 	}
