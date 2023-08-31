@@ -37,15 +37,15 @@ func testAstEquality(text, expected string) error {
 	}
 
 	parser := parser.NewParser(&logger)
-	namedTree := parser.Parse(&source_code)
+	namedTree := parser.Parse(source_code)
 	if !logger.IsEmpty() {
 		return report_errors(&logger)
 	}
 
-	result := ToDeBruijn(&source_code, &namedTree)
+	result := ToDeBruijn(source_code, namedTree)
 	de_bruijn_tree := result.Tree
 
-	got := ast.Print(&source_code, &de_bruijn_tree)
+	got := ast.Print(source_code, de_bruijn_tree)
 	if sexpr.Minified(got) != sexpr.Minified(expected) {
 		lhs := sexpr.Pretty(got)
 		rhs := sexpr.Pretty(expected)

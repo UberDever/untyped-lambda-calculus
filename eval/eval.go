@@ -1,37 +1,31 @@
 package eval
 
 import (
+	"lambda/ast/ast"
 	"lambda/ast/tree"
+	"lambda/syntax/source"
 )
 
-type eval_context struct {
+func shift_indicies(expr *tree.MutableTree, cutoff, amount int) {
 }
 
-func NewEvalContext() eval_context {
-	return eval_context{}
-}
-
-func shift_indicies(expr tree.Tree, cutoff, amount int) tree.Tree {
-	return expr
-}
-
-func substitute(in tree.Tree, expr tree.Tree, level int) tree.Tree {
-	return in
+func substitute(in *tree.MutableTree, expr tree.Node, level int) {
 }
 
 func is_redex(expr tree.Node) bool {
 	return false
 }
 
-func (c *eval_context) Eval(expr tree.Tree) tree.Tree {
-	// new_root := c.eval_rec(expr)
-	return expr
-}
+func Eval(source_code source.SourceCode, in_tree tree.Tree) tree.Tree {
+	cur_tree := tree.NewMutableTree(in_tree)
 
-func (c *eval_context) eval_rec(expr tree.Node) tree.Node {
-	if is_redex(expr) {
+	for is_redex(cur_tree.Root()) {
+		application := ast.ToApplicationNode(source_code, cur_tree.Tree, cur_tree.Root())
+		_ = application
+		// abstraction := cur_tree.Node(application.Lhs())
+		// argument := cur_tree.Node(application.Rhs())
 	}
-	return expr
+	return cur_tree.Clone()
 }
 
 // type eval_context struct {

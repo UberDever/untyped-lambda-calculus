@@ -38,18 +38,17 @@ func testEvalEquality(text, expected string) error {
 	}
 
 	parser := parser.NewParser(&logger)
-	namedTree := parser.Parse(&source_code)
+	namedTree := parser.Parse(source_code)
 	if !logger.IsEmpty() {
 		return report_errors(&logger)
 	}
 
-	result := debruijn.ToDeBruijn(&source_code, &namedTree)
+	result := debruijn.ToDeBruijn(source_code, namedTree)
 	de_bruijn_tree := result.Tree
 
-	eval_context := NewEvalContext()
-	eval_tree := eval_context.Eval(de_bruijn_tree)
+	eval_tree := Eval(source_code, de_bruijn_tree)
 
-	got := ast.Print(&source_code, &eval_tree)
+	got := ast.Print(source_code, eval_tree)
 	if sexpr.Minified(got) != sexpr.Minified(expected) {
 		lhs := sexpr.Pretty(got)
 		rhs := sexpr.Pretty(expected)

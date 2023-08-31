@@ -12,7 +12,7 @@ type DeBruijnResult struct {
 	VariableNames []string
 }
 
-func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) DeBruijnResult {
+func ToDeBruijn(source_code source.SourceCode, tree_with_names tree.Tree) DeBruijnResult {
 	abstraction_vars := util.NewStack[string]()
 	free_vars_context := make(map[string]int)
 	indicies := util.NewStack[tree.NodeId]()
@@ -52,11 +52,11 @@ func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) DeBr
 		return tree.NodeId(len(nodes) - 1)
 	}
 
-	onEnter := func(t *tree.Tree, node_id tree.NodeId) {
+	onEnter := func(t tree.Tree, node_id tree.NodeId) {
 		node := t.Node(node_id)
 		switch node.Tag {
 		case tree.NodeNamedVariable:
-			typed_node := ast.NewNamedVariableNode(source_code, t, node)
+			typed_node := ast.ToNamedVariableNode(source_code, t, node)
 			id := typed_node.Name
 			index := abs_var_id(id)
 			if index == tree.NodeNull {
@@ -67,16 +67,16 @@ func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) DeBr
 		case tree.NodeApplication:
 			break
 		case tree.NodeAbstraction:
-			typed_node := ast.NewAbstractionNode(source_code, t, node)
+			typed_node := ast.ToAbstractionNode(source_code, t, node)
 			bound := t.Node(typed_node.Bound())
-			bound_node := ast.NewNamedVariableNode(source_code, t, bound)
+			bound_node := ast.ToNamedVariableNode(source_code, t, bound)
 			abstraction_vars.Push(bound_node.Name)
 		default:
 			panic("Unreachable")
 		}
 	}
 
-	onExit := func(t *tree.Tree, node_id tree.NodeId) {
+	onExit := func(t tree.Tree, node_id tree.NodeId) {
 		node := t.Node(node_id)
 		token := node.Token
 		switch node.Tag {

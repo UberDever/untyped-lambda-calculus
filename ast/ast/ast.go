@@ -12,18 +12,18 @@ type INode interface {
 	Children() (tree.NodeId, tree.NodeId)
 }
 
-func NewINode(src *source.SourceCode, t *tree.Tree, node tree.Node) INode {
+func NewINode(src source.SourceCode, t tree.Tree, node tree.Node) INode {
 	switch node.Tag {
 	case tree.NodeNamedVariable:
-		return NewNamedVariableNode(src, t, node)
+		return ToNamedVariableNode(src, t, node)
 	case tree.NodeApplication:
-		return NewApplicationNode(src, t, node)
+		return ToApplicationNode(src, t, node)
 	case tree.NodeAbstraction:
-		return NewAbstractionNode(src, t, node)
+		return ToAbstractionNode(src, t, node)
 	case tree.NodeIndexVariable:
-		return NewIndexVariableNode(src, t, node)
+		return ToIndexVariableNode(src, t, node)
 	case tree.NodePureAbstraction:
-		return NewPureAbstractionNode(src, t, node)
+		return ToPureAbstractionNode(src, t, node)
 	}
 	panic("Unreachable")
 }
@@ -49,7 +49,7 @@ type pure_abstraction_node struct {
 	n tree.Node
 }
 
-func NewNamedVariableNode(src *source.SourceCode, tree *tree.Tree, node tree.Node) named_variable_node {
+func ToNamedVariableNode(src source.SourceCode, tree tree.Tree, node tree.Node) named_variable_node {
 	return named_variable_node{
 		n:    node,
 		Name: src.Lexeme(node.Token),
@@ -64,7 +64,7 @@ func (n named_variable_node) Children() (tree.NodeId, tree.NodeId) {
 	return tree.NodeNull, tree.NodeNull
 }
 
-func NewApplicationNode(src *source.SourceCode, tree *tree.Tree, node tree.Node) application_node {
+func ToApplicationNode(src source.SourceCode, tree tree.Tree, node tree.Node) application_node {
 	return application_node{
 		n: node,
 	}
@@ -86,7 +86,7 @@ func (n application_node) Rhs() tree.NodeId {
 	return n.n.Rhs
 }
 
-func NewAbstractionNode(src *source.SourceCode, tree *tree.Tree, node tree.Node) abstraction_node {
+func ToAbstractionNode(src source.SourceCode, tree tree.Tree, node tree.Node) abstraction_node {
 	return abstraction_node{
 		n: node,
 	}
@@ -108,7 +108,7 @@ func (n abstraction_node) Body() tree.NodeId {
 	return n.n.Rhs
 }
 
-func NewIndexVariableNode(src *source.SourceCode, tree *tree.Tree, node tree.Node) index_variable_node {
+func ToIndexVariableNode(src source.SourceCode, tree tree.Tree, node tree.Node) index_variable_node {
 	return index_variable_node{
 		n: node,
 	}
@@ -130,7 +130,7 @@ func (n index_variable_node) NameIndex() int {
 	return int(n.n.Rhs)
 }
 
-func NewPureAbstractionNode(src *source.SourceCode, tree *tree.Tree, node tree.Node) pure_abstraction_node {
+func ToPureAbstractionNode(src source.SourceCode, tree tree.Tree, node tree.Node) pure_abstraction_node {
 	return pure_abstraction_node{
 		n: node,
 	}
@@ -148,13 +148,13 @@ func (n pure_abstraction_node) Body() tree.NodeId {
 	return n.n.Lhs
 }
 
-type NodeAction = func(*tree.Tree, tree.NodeId)
+type NodeAction = func(tree.Tree, tree.NodeId)
 
-func TraversePreorder(source_code *source.SourceCode, tree *tree.Tree, onEnter, onExit NodeAction) {
+func TraversePreorder(source_code source.SourceCode, tree tree.Tree, onEnter, onExit NodeAction) {
 	traversePreorder(source_code, tree, onEnter, onExit, tree.Root())
 }
 
-func traversePreorder(source_code *source.SourceCode, t *tree.Tree, onEnter, onExit NodeAction, id tree.NodeId) {
+func traversePreorder(source_code source.SourceCode, t tree.Tree, onEnter, onExit NodeAction, id tree.NodeId) {
 	if id == tree.NodeNull {
 		return
 	}
@@ -167,9 +167,9 @@ func traversePreorder(source_code *source.SourceCode, t *tree.Tree, onEnter, onE
 	traversePreorder(source_code, t, onEnter, onExit, rhs)
 }
 
-func Print(src *source.SourceCode, in_tree *tree.Tree) string {
+func Print(src source.SourceCode, in_tree tree.Tree) string {
 	str := strings.Builder{}
-	onEnter := func(t *tree.Tree, id tree.NodeId) {
+	onEnter := func(t tree.Tree, id tree.NodeId) {
 		node := t.Node(id)
 		inode := NewINode(src, t, node)
 		if node.Tag != tree.NodeIndexVariable &&
@@ -180,7 +180,7 @@ func Print(src *source.SourceCode, in_tree *tree.Tree) string {
 		}
 		str.WriteString(inode.String())
 	}
-	onExit := func(t *tree.Tree, id tree.NodeId) {
+	onExit := func(t tree.Tree, id tree.NodeId) {
 		node := t.Node(id)
 		if node.Tag != tree.NodeIndexVariable &&
 			node.Tag != tree.NodeNamedVariable {

@@ -94,7 +94,7 @@ func (tok tokenizer) Tokenize(filename string, text utf8string.String) source.So
 }
 
 type parser struct {
-	src *source.SourceCode
+	src source.SourceCode
 
 	ast_nodes []tree.Node
 	current   source.TokenId
@@ -158,7 +158,7 @@ func NewParser(logger *util.Logger) parser {
 	}
 }
 
-func (p *parser) Parse(src *source.SourceCode) tree.Tree {
+func (p *parser) Parse(src source.SourceCode) tree.Tree {
 	p.src = src
 
 	root := p.parse_term()

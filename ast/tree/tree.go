@@ -38,10 +38,42 @@ func NewTree(root NodeId, nodes []Node) Tree {
 	return Tree{root: root, nodes: nodes}
 }
 
-func (ast Tree) Node(id NodeId) Node {
-	return ast.nodes[int(id)]
+func (t Tree) Node(id NodeId) Node {
+	return t.nodes[int(id)]
 }
 
-func (ast Tree) Root() NodeId {
-	return ast.root
+func (t Tree) Root() Node {
+	return t.Node(t.root)
+}
+
+func (t Tree) RootId() NodeId {
+	return t.root
+}
+
+func (t Tree) Clone() Tree {
+	return Tree{
+		root:  t.RootId(),
+		nodes: append([]Node{}, t.nodes...),
+	}
+}
+
+type MutableTree struct {
+	Tree
+}
+
+func NewMutableTree(tree Tree) MutableTree {
+	t := tree.Clone()
+	return MutableTree{t}
+}
+
+func (t *MutableTree) SetRoot(root NodeId) {
+	t.root = root
+}
+
+func (t *MutableTree) SetNode(id NodeId, node Node) {
+	t.nodes[int(id)] = node
+}
+
+func (t *MutableTree) Count() int {
+	return len(t.nodes)
 }
