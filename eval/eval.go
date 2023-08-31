@@ -2,7 +2,10 @@ package eval
 
 import (
 	"lambda/ast/ast"
+	"lambda/ast/sexpr"
 	"lambda/ast/tree"
+	"lambda/syntax/source"
+	"lambda/util"
 )
 
 func replicate_subtree(t *tree.MutableTree, root tree.NodeId) (new_root tree.NodeId) {
@@ -85,17 +88,28 @@ func is_redex(t tree.Tree, expr tree.Node) bool {
 	if expr.Tag == tree.NodeApplication {
 		v := ast.ToApplicationNode(t, expr)
 		lhs := t.Node(v.Lhs())
-		if lhs.Tag == tree.NodePureAbstraction {
+		switch lhs.Tag {
+		case tree.NodeApplication:
+			return is_redex(t, lhs)
+		case tree.NodePureAbstraction:
 			return true
 		}
 	}
 	return false
 }
 
-func Eval(in_tree tree.Tree) tree.Tree {
+func Eval(logger *util.Logger, source_code source.SourceCode, in_tree tree.Tree) tree.Tree {
+	log_computation := func(t tree.Tree) {
+		tree := ast.Print(source_code, t)
+		pretty := sexpr.Pretty(tree)
+		logger.Add(util.NewMessage(util.Debug, 0, 0, "e", pretty))
+	}
+
 	t := tree.NewMutableTree(in_tree)
 
+	// TODO: This is incorrect, need to account for case ((((λx. x) 5) 5) 5) *deep nesting*
 	for is_redex(t.Tree, t.Root()) {
+		log_computation(t.Tree)
 		application := ast.ToApplicationNode(t.Tree, t.Root())
 		lhs := t.Node(application.Lhs())
 		abstraction := ast.ToPureAbstractionNode(t.Tree, lhs)

@@ -46,7 +46,11 @@ func testEvalEquality(text, expected string) error {
 	result := debruijn.ToDeBruijn(source_code, namedTree)
 	de_bruijn_tree := result.Tree
 
-	eval_tree := Eval(de_bruijn_tree)
+	eval_tree := Eval(&logger, source_code, de_bruijn_tree)
+	for !logger.IsEmpty() {
+		m, _ := logger.Next()
+		fmt.Println(m)
+	}
 
 	got := ast.Print(source_code, eval_tree)
 	if sexpr.Minified(got) != sexpr.Minified(expected) {
@@ -105,10 +109,32 @@ func TestEvalRedex1(test *testing.T) {
 	}
 }
 
-// TODO: Develop this further
-// func TestEvalApplication(test *testing.T) {
-// 	text := `((λx.λy.λz.(y z x)) (x y z))`
-// 	expected := `(\y'\z'.(y' z' (x y z)))`
+func TestEvalNormalForm(test *testing.T) {
+	text := `
+        λx1.λx2.λx3.(((y N1) N2) N3)
+    `
+	expected := `(λ (λ (λ (((3 4) 5) 6))))`
+	if e := testEvalEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+func TestEvalRedex2(test *testing.T) {
+	text := `((((λx.x) N1) N2) N3) `
+	expected := `((0 1) 2)`
+	if e := testEvalEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+// func TestEvalRedexN(test *testing.T) {
+// 	text := `
+//     let K = λx.λy.x in
+//     let S = λx.λy.λz.((x z) (y z)) in
+//     let I = λx.x in
+//     ((S K) K)
+//     `
+// 	expected := `(λ 0)`
 // 	if e := testEvalEquality(text, expected); e != nil {
 // 		test.Error(e)
 // 	}
