@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"lambda/domain"
+	"lambda/syntax/source"
 	"lambda/util"
 	"testing"
 
@@ -13,20 +13,20 @@ func TestTokenizer(test *testing.T) {
         λx.λy.(foo bar) baz
     `)
 	expected := [...]struct {
-		domain.TokenId
+		source.TokenId
 		string
 	}{
-		{domain.TokenLambda, `λ`},
-		{domain.TokenIdentifier, "x"},
-		{domain.TokenDot, `.`},
-		{domain.TokenLambda, `λ`},
-		{domain.TokenIdentifier, "y"},
-		{domain.TokenDot, `.`},
-		{domain.TokenLeftParen, `(`},
-		{domain.TokenIdentifier, "foo"},
-		{domain.TokenIdentifier, "bar"},
-		{domain.TokenRightParen, `)`},
-		{domain.TokenIdentifier, "baz"},
+		{source.TokenLambda, `λ`},
+		{source.TokenIdentifier, "x"},
+		{source.TokenDot, `.`},
+		{source.TokenLambda, `λ`},
+		{source.TokenIdentifier, "y"},
+		{source.TokenDot, `.`},
+		{source.TokenLeftParen, `(`},
+		{source.TokenIdentifier, "foo"},
+		{source.TokenIdentifier, "bar"},
+		{source.TokenRightParen, `)`},
+		{source.TokenIdentifier, "baz"},
 	}
 
 	logger := util.NewLogger()
@@ -36,7 +36,7 @@ func TestTokenizer(test *testing.T) {
 
 	// strip eof in iteration (note TokenCount - 1)
 	for i := 0; i < source_code.TokenCount()-1; i++ {
-		t := source_code.Token(domain.TokenId(i))
+		t := source_code.Token(source.TokenId(i))
 		asStr := text.Slice(t.Start, t.End)
 		if expected[i].string != asStr ||
 			expected[i].TokenId != t.Tag {

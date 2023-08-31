@@ -3,7 +3,6 @@ package parser
 import (
 	"fmt"
 	"lambda/ast/tree"
-	"lambda/domain"
 	"lambda/syntax/source"
 	"lambda/util"
 	"unicode"
@@ -20,13 +19,13 @@ func NewTokenizer(logger *util.Logger) tokenizer {
 }
 
 func (tok tokenizer) Tokenize(filename string, text utf8string.String) source.SourceCode {
-	tokens := make([]domain.Token, 0, 16)
+	tokens := make([]source.Token, 0, 16)
 	pos := 0
 	line, col := 1, 0
 
-	add_token := func(tag domain.TokenId, length int) {
+	add_token := func(tag source.TokenId, length int) {
 		start, end := pos, pos+length
-		tokens = append(tokens, domain.NewToken(tag, start, end, line, col))
+		tokens = append(tokens, source.NewToken(tag, start, end, line, col))
 		pos = end
 		col = end
 	}
@@ -46,11 +45,11 @@ func (tok tokenizer) Tokenize(filename string, text utf8string.String) source.So
 	}
 
 	identifier_rune := func(r rune) bool {
-		return r != domain.TokenDotRune &&
-			r != domain.TokenLambdaRune &&
-			r != domain.TokenLambdaBackslashRune &&
-			r != domain.TokenLeftParenRune &&
-			r != domain.TokenRightParenRune &&
+		return r != source.TokenDotRune &&
+			r != source.TokenLambdaRune &&
+			r != source.TokenLambdaBackslashRune &&
+			r != source.TokenLeftParenRune &&
+			r != source.TokenRightParenRune &&
 			!unicode.IsSpace(r)
 	}
 	identifier_length := func() int {
@@ -72,33 +71,33 @@ func (tok tokenizer) Tokenize(filename string, text utf8string.String) source.So
 		}
 
 		switch text.At(pos) {
-		case domain.TokenDotRune:
-			add_token(domain.TokenDot, 1)
-		case domain.TokenLambdaRune:
-			add_token(domain.TokenLambda, 1)
-		case domain.TokenLambdaBackslashRune:
-			add_token(domain.TokenLambda, 1)
-		case domain.TokenLeftParenRune:
-			add_token(domain.TokenLeftParen, 1)
-		case domain.TokenRightParenRune:
-			add_token(domain.TokenRightParen, 1)
+		case source.TokenDotRune:
+			add_token(source.TokenDot, 1)
+		case source.TokenLambdaRune:
+			add_token(source.TokenLambda, 1)
+		case source.TokenLambdaBackslashRune:
+			add_token(source.TokenLambda, 1)
+		case source.TokenLeftParenRune:
+			add_token(source.TokenLeftParen, 1)
+		case source.TokenRightParenRune:
+			add_token(source.TokenRightParen, 1)
 		default:
 			length := identifier_length()
 			if length > 0 {
-				add_token(domain.TokenIdentifier, length)
+				add_token(source.TokenIdentifier, length)
 			}
 		}
 	}
 
-	tokens = append(tokens, domain.NewTokenEof())
+	tokens = append(tokens, source.NewTokenEof())
 	return source.NewSourceCode(filename, text, tokens)
 }
 
 type parser struct {
 	src *source.SourceCode
 
-	ast_nodes []domain.Node
-	current   domain.TokenId
+	ast_nodes []tree.Node
+	current   source.TokenId
 	atEof     bool
 
 	logger *util.Logger
@@ -108,12 +107,12 @@ func (p *parser) next() {
 	for {
 		p.current++
 		c := p.src.Token(p.current)
-		p.atEof = c.Tag == domain.TokenEof
+		p.atEof = c.Tag == source.TokenEof
 		return
 	}
 }
 
-func (p *parser) matchTag(tag domain.TokenId) bool {
+func (p *parser) matchTag(tag source.TokenId) bool {
 	if p.atEof {
 		return false
 	}
@@ -122,13 +121,13 @@ func (p *parser) matchTag(tag domain.TokenId) bool {
 }
 
 // TODO: Refactor this crap to support tag and tag + lexeme reporting
-func (p *parser) expect(tag domain.TokenId, lexeme string) (ok bool) {
+func (p *parser) expect(tag source.TokenId, lexeme string) (ok bool) {
 	report_error := func(expected, got string, line, col int) {
 		message := fmt.Sprintf("\nExpected\n %s but got\n %s", expected, got)
 		p.logger.Add(util.NewMessage(util.Fatal, line, col, p.src.Filename(), message))
 	}
 
-	expected := p.src.TraceToken(tag, lexeme, int(domain.TokenEof), int(domain.TokenEof))
+	expected := p.src.TraceToken(tag, lexeme, int(source.TokenEof), int(source.TokenEof))
 
 	if p.atEof {
 		got := "EOF"
@@ -148,9 +147,9 @@ func (p *parser) expect(tag domain.TokenId, lexeme string) (ok bool) {
 	return
 }
 
-func (p *parser) new_node(node domain.Node) domain.NodeId {
+func (p *parser) new_node(node tree.Node) tree.NodeId {
 	p.ast_nodes = append(p.ast_nodes, node)
-	return domain.NodeId(len(p.ast_nodes) - 1)
+	return tree.NodeId(len(p.ast_nodes) - 1)
 }
 
 func NewParser(logger *util.Logger) parser {
@@ -172,22 +171,22 @@ func (p *parser) Parse(src *source.SourceCode) tree.Tree {
 	return tree.NewTree(root, p.ast_nodes)
 }
 
-func (p *parser) parse_term() domain.NodeId {
-	id := domain.NodeInvalid
+func (p *parser) parse_term() tree.NodeId {
+	id := tree.NodeInvalid
 
-	if !p.matchTag(domain.TokenIdentifier) {
-		open_paren := p.matchTag(domain.TokenLeftParen)
+	if !p.matchTag(source.TokenIdentifier) {
+		open_paren := p.matchTag(source.TokenLeftParen)
 
 		if open_paren {
-			p.expect(domain.TokenLeftParen, "")
+			p.expect(source.TokenLeftParen, "")
 		}
-		if p.matchTag(domain.TokenLambda) {
+		if p.matchTag(source.TokenLambda) {
 			id = p.parse_abstraction()
 		} else {
 			id = p.parse_application()
 		}
 		if open_paren {
-			p.expect(domain.TokenRightParen, "")
+			p.expect(source.TokenRightParen, "")
 		}
 
 	} else {
@@ -197,10 +196,10 @@ func (p *parser) parse_term() domain.NodeId {
 	return id
 }
 
-func (p *parser) parse_variable() domain.NodeId {
-	tag, token, lhs, rhs := domain.NodeInvalid, domain.TokenInvalid, domain.NodeInvalid, domain.NodeInvalid
+func (p *parser) parse_variable() tree.NodeId {
+	tag, token, lhs, rhs := tree.NodeInvalid, source.TokenInvalid, tree.NodeInvalid, tree.NodeInvalid
 
-	tag = domain.NodeNamedVariable
+	tag = tree.NodeNamedVariable
 	token = p.current
 	identifier := p.src.Lexeme(token)
 	if identifier == "let" {
@@ -209,63 +208,63 @@ func (p *parser) parse_variable() domain.NodeId {
 
 	p.next()
 
-	return p.new_node(domain.Node{
+	return p.new_node(tree.Node{
 		Tag:   tag,
 		Token: token,
 		Lhs:   lhs,
 		Rhs:   rhs})
 }
 
-func (p *parser) parse_application() domain.NodeId {
-	tag, token, lhs, rhs := domain.NodeInvalid, domain.TokenInvalid, domain.NodeInvalid, domain.NodeInvalid
+func (p *parser) parse_application() tree.NodeId {
+	tag, token, lhs, rhs := tree.NodeInvalid, source.TokenInvalid, tree.NodeInvalid, tree.NodeInvalid
 
-	tag = domain.NodeApplication
+	tag = tree.NodeApplication
 	token = p.current
 	lhs = p.parse_term()
 	rhs = p.parse_term()
 
-	return p.new_node(domain.Node{
+	return p.new_node(tree.Node{
 		Tag:   tag,
 		Token: token,
 		Lhs:   lhs,
 		Rhs:   rhs})
 }
 
-func (p *parser) parse_abstraction() domain.NodeId {
-	tag, token, lhs, rhs := domain.NodeInvalid, domain.TokenInvalid, domain.NodeInvalid, domain.NodeInvalid
+func (p *parser) parse_abstraction() tree.NodeId {
+	tag, token, lhs, rhs := tree.NodeInvalid, source.TokenInvalid, tree.NodeInvalid, tree.NodeInvalid
 
-	tag = domain.NodeAbstraction
+	tag = tree.NodeAbstraction
 	token = p.current
-	p.expect(domain.TokenLambda, "")
+	p.expect(source.TokenLambda, "")
 	lhs = p.parse_variable()
-	p.expect(domain.TokenDot, "")
+	p.expect(source.TokenDot, "")
 	rhs = p.parse_term()
 
-	return p.new_node(domain.Node{
+	return p.new_node(tree.Node{
 		Tag:   tag,
 		Token: token,
 		Lhs:   lhs,
 		Rhs:   rhs})
 }
 
-func (p *parser) parse_let_binding() domain.NodeId {
+func (p *parser) parse_let_binding() tree.NodeId {
 
 	token := p.current
-	p.expect(domain.TokenIdentifier, "let")
+	p.expect(source.TokenIdentifier, "let")
 	bound := p.parse_variable()
-	p.expect(domain.TokenIdentifier, "=")
+	p.expect(source.TokenIdentifier, "=")
 	value := p.parse_term()
-	p.expect(domain.TokenIdentifier, "in")
+	p.expect(source.TokenIdentifier, "in")
 	expr := p.parse_term()
 
-	absraction := p.new_node(domain.Node{
-		Tag:   domain.NodeAbstraction,
+	absraction := p.new_node(tree.Node{
+		Tag:   tree.NodeAbstraction,
 		Token: token,
 		Lhs:   bound,
 		Rhs:   expr})
 
-	return p.new_node(domain.Node{
-		Tag:   domain.NodeApplication,
+	return p.new_node(tree.Node{
+		Tag:   tree.NodeApplication,
 		Token: token,
 		Lhs:   absraction,
 		Rhs:   value})

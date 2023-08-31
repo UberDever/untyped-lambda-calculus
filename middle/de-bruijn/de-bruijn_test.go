@@ -38,11 +38,11 @@ func testAstEquality(text, expected string) error {
 
 	parser := parser.NewParser(&logger)
 	namedTree := parser.Parse(&source_code)
-
-	result := ToDeBruijn(&source_code, &namedTree)
 	if !logger.IsEmpty() {
 		return report_errors(&logger)
 	}
+
+	result := ToDeBruijn(&source_code, &namedTree)
 	de_bruijn_tree := result.Tree
 
 	got := ast.Print(&source_code, &de_bruijn_tree)

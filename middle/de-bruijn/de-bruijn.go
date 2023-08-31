@@ -3,7 +3,6 @@ package debruijn
 import (
 	"lambda/ast/ast"
 	"lambda/ast/tree"
-	"lambda/domain"
 	"lambda/syntax/source"
 	"lambda/util"
 )
@@ -16,24 +15,24 @@ type DeBruijnResult struct {
 func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) DeBruijnResult {
 	abstraction_vars := util.NewStack[string]()
 	free_vars_context := make(map[string]int)
-	indicies := util.NewStack[domain.NodeId]()
-	node_ids := util.NewStack[domain.NodeId]()
+	indicies := util.NewStack[tree.NodeId]()
+	node_ids := util.NewStack[tree.NodeId]()
 	variable_names := make([]string, 0, 8)
 
-	abs_var_id := func(variable string) domain.NodeId {
+	abs_var_id := func(variable string) tree.NodeId {
 		vars := abstraction_vars.Values()
 		// traverse in reverse order to encounter variable of closest lambda abstraction
 		abstractions_encountered := len(vars) - 1
 		for i := abstractions_encountered; i >= 0; i-- {
 			id := vars[i]
 			if id == variable {
-				return domain.NodeId(abstractions_encountered - i)
+				return tree.NodeId(abstractions_encountered - i)
 			}
 		}
-		return domain.NodeNull
+		return tree.NodeNull
 	}
 
-	free_var_id := func(variable string) domain.NodeId {
+	free_var_id := func(variable string) tree.NodeId {
 		index, ok := free_vars_context[variable]
 		var free_id int
 		if !ok {
@@ -44,69 +43,69 @@ func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) DeBr
 		}
 		abstractions_encountered := len(abstraction_vars.Values()) - 1
 		free_id += abstractions_encountered + 1
-		return domain.NodeId(free_id)
+		return tree.NodeId(free_id)
 	}
 
-	nodes := make([]domain.Node, 0)
-	add_node := func(node domain.Node) domain.NodeId {
+	nodes := make([]tree.Node, 0)
+	add_node := func(node tree.Node) tree.NodeId {
 		nodes = append(nodes, node)
-		return domain.NodeId(len(nodes) - 1)
+		return tree.NodeId(len(nodes) - 1)
 	}
 
-	onEnter := func(tree *tree.Tree, node_id domain.NodeId) {
-		node := tree.Node(node_id)
+	onEnter := func(t *tree.Tree, node_id tree.NodeId) {
+		node := t.Node(node_id)
 		switch node.Tag {
-		case domain.NodeNamedVariable:
-			typed_node := ast.NewNamedVariableNode(source_code, tree, node)
+		case tree.NodeNamedVariable:
+			typed_node := ast.NewNamedVariableNode(source_code, t, node)
 			id := typed_node.Name
 			index := abs_var_id(id)
-			if index == domain.NodeNull {
+			if index == tree.NodeNull {
 				index = free_var_id(id)
 			}
 			variable_names = append(variable_names, id)
 			indicies.Push(index)
-		case domain.NodeApplication:
+		case tree.NodeApplication:
 			break
-		case domain.NodeAbstraction:
-			typed_node := ast.NewAbstractionNode(source_code, tree, node)
-			bound := tree.Node(typed_node.Bound())
-			bound_node := ast.NewNamedVariableNode(source_code, tree, bound)
+		case tree.NodeAbstraction:
+			typed_node := ast.NewAbstractionNode(source_code, t, node)
+			bound := t.Node(typed_node.Bound())
+			bound_node := ast.NewNamedVariableNode(source_code, t, bound)
 			abstraction_vars.Push(bound_node.Name)
 		default:
 			panic("Unreachable")
 		}
 	}
 
-	onExit := func(tree *tree.Tree, node_id domain.NodeId) {
-		node := tree.Node(node_id)
+	onExit := func(t *tree.Tree, node_id tree.NodeId) {
+		node := t.Node(node_id)
 		token := node.Token
 		switch node.Tag {
-		case domain.NodeNamedVariable:
+		case tree.NodeNamedVariable:
 			index := indicies.ForcePop()
-			name_index := domain.NodeId(len(variable_names) - 1)
-			id := add_node(domain.Node{
-				Tag:   domain.NodeIndexVariable,
+			name_index := tree.NodeId(len(variable_names) - 1)
+			id := add_node(tree.Node{
+				Tag:   tree.NodeIndexVariable,
 				Token: token,
 				Lhs:   index,
 				Rhs:   name_index})
 			node_ids.Push(id)
-		case domain.NodeApplication:
+		case tree.NodeApplication:
 			rhs := node_ids.ForcePop()
 			lhs := node_ids.ForcePop()
-			id := add_node(domain.Node{
-				Tag:   domain.NodeApplication,
+			id := add_node(tree.Node{
+				Tag:   tree.NodeApplication,
 				Token: token,
 				Lhs:   lhs,
 				Rhs:   rhs})
 			node_ids.Push(id)
-		case domain.NodeAbstraction:
+		case tree.NodeAbstraction:
 			body := node_ids.ForcePop()
 			_ = node_ids.ForcePop() // variable (don't need named variable anymore)
-			id := add_node(domain.Node{
-				Tag:   domain.NodePureAbstraction,
+			id := add_node(tree.Node{
+				Tag:   tree.NodePureAbstraction,
 				Token: token,
 				Lhs:   body,
-				Rhs:   domain.NodeNull})
+				Rhs:   tree.NodeNull})
 			node_ids.Push(id)
 			abstraction_vars.Pop()
 		default:
@@ -115,7 +114,7 @@ func ToDeBruijn(source_code *source.SourceCode, tree_with_names *tree.Tree) DeBr
 	}
 
 	ast.TraversePreorder(source_code, tree_with_names, onEnter, onExit)
-	root := domain.NodeId(len(nodes) - 1)
+	root := tree.NodeId(len(nodes) - 1)
 
 	return DeBruijnResult{
 		Tree:          tree.NewTree(root, nodes),

@@ -2,7 +2,6 @@ package source
 
 import (
 	"fmt"
-	"lambda/domain"
 
 	"golang.org/x/exp/utf8string"
 )
@@ -10,10 +9,10 @@ import (
 type SourceCode struct {
 	filename string
 	text     utf8string.String
-	tokens   []domain.Token
+	tokens   []Token
 }
 
-func NewSourceCode(filename string, text utf8string.String, tokens []domain.Token) SourceCode {
+func NewSourceCode(filename string, text utf8string.String, tokens []Token) SourceCode {
 	return SourceCode{
 		filename: filename,
 		text:     text,
@@ -21,14 +20,14 @@ func NewSourceCode(filename string, text utf8string.String, tokens []domain.Toke
 	}
 }
 
-func (s SourceCode) Location(id domain.TokenId) (line, col int) {
+func (s SourceCode) Location(id TokenId) (line, col int) {
 	t := s.Token(id)
 	line = t.Line
 	col = t.Col
 	return
 }
 
-func (s SourceCode) Lexeme(id domain.TokenId) string {
+func (s SourceCode) Lexeme(id TokenId) string {
 	t := s.Token(id)
 	return s.text.Slice(int(t.Start), int(t.End))
 }
@@ -37,7 +36,7 @@ func (s SourceCode) Filename() string {
 	return s.filename
 }
 
-func (s SourceCode) Token(id domain.TokenId) domain.Token {
+func (s SourceCode) Token(id TokenId) Token {
 	return s.tokens[id]
 }
 
@@ -45,7 +44,7 @@ func (s SourceCode) TokenCount() int {
 	return len(s.tokens)
 }
 
-func (s SourceCode) TraceToken(tag domain.TokenId, lexeme string, line int, col int) string {
+func (s SourceCode) TraceToken(tag TokenId, lexeme string, line int, col int) string {
 	str := fmt.Sprintf("\ttag = %d\n", tag)
 	if lexeme != "" {
 		str += fmt.Sprintf("\tlexeme = %#v\n", lexeme)

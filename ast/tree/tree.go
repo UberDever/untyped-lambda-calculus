@@ -1,22 +1,47 @@
 package tree
 
 import (
-	"lambda/domain"
+	"lambda/syntax/source"
+	"math"
 )
 
-type Tree struct {
-	root  domain.NodeId
-	nodes []domain.Node
+type NodeId int
+
+const NodeInvalid NodeId = math.MinInt
+const NodeNull NodeId = -1
+
+const (
+	NodeNamedVariable NodeId = iota
+	NodeApplication
+	NodeAbstraction
+	NodeIndexVariable
+	NodePureAbstraction
+	NodeMax
+)
+
+type Node struct {
+	Tag      NodeId
+	Token    source.TokenId
+	Lhs, Rhs NodeId
 }
 
-func NewTree(root domain.NodeId, nodes []domain.Node) Tree {
+func NewNodeInvalid() Node {
+	return Node{Tag: NodeInvalid, Token: source.TokenInvalid, Lhs: NodeInvalid, Rhs: NodeInvalid}
+}
+
+type Tree struct {
+	root  NodeId
+	nodes []Node
+}
+
+func NewTree(root NodeId, nodes []Node) Tree {
 	return Tree{root: root, nodes: nodes}
 }
 
-func (ast Tree) Node(id domain.NodeId) domain.Node {
+func (ast Tree) Node(id NodeId) Node {
 	return ast.nodes[int(id)]
 }
 
-func (ast Tree) Root() domain.NodeId {
+func (ast Tree) Root() NodeId {
 	return ast.root
 }

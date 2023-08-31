@@ -1,4 +1,4 @@
-package domain
+package source
 
 import (
 	"math"

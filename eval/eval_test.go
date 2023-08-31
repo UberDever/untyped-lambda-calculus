@@ -9,6 +9,7 @@ import (
 	"lambda/syntax/parser"
 	"lambda/util"
 	"strings"
+	"testing"
 
 	"golang.org/x/exp/utf8string"
 )
@@ -38,14 +39,17 @@ func testEvalEquality(text, expected string) error {
 
 	parser := parser.NewParser(&logger)
 	namedTree := parser.Parse(&source_code)
-
-	result := debruijn.ToDeBruijn(&source_code, &namedTree)
 	if !logger.IsEmpty() {
 		return report_errors(&logger)
 	}
+
+	result := debruijn.ToDeBruijn(&source_code, &namedTree)
 	de_bruijn_tree := result.Tree
 
-	got := ast.Print(&source_code, &de_bruijn_tree)
+	eval_context := NewEvalContext()
+	eval_tree := eval_context.Eval(de_bruijn_tree)
+
+	got := ast.Print(&source_code, &eval_tree)
 	if sexpr.Minified(got) != sexpr.Minified(expected) {
 		lhs := sexpr.Pretty(got)
 		rhs := sexpr.Pretty(expected)
@@ -55,76 +59,44 @@ func testEvalEquality(text, expected string) error {
 	return nil
 }
 
-//
-// func testEvalEquality(text, expected string) error {
-// 	tree, err := parse_tree(text)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	ctx := NewEvalContext()
-// 	evaluated := ctx.Eval(tree)
-// 	got := ToString(evaluated, false)
-// 	if ast.Minified(got) != ast.Minified(expected) {
-// 		lhs := ast.Pretty(got)
-// 		rhs := ast.Pretty(expected)
-// 		trace := util.ConcatVertically(lhs, rhs)
-// 		return fmt.Errorf("AST are not equal\n%s", trace)
-// 	}
-// 	return nil
-// }
-//
-// func TestEvalPrimitive(test *testing.T) {
-// 	text := `x`
-// 	expected := `x`
-// 	if e := testEvalEquality(text, expected); e != nil {
-// 		test.Error(e)
-// 	}
-// }
-//
-// func TestEvalAbstraction(test *testing.T) {
-// 	text := `λx.x`
-// 	expected := `(\ x x)`
-// 	if e := testEvalEquality(text, expected); e != nil {
-// 		test.Error(e)
-// 	}
-// }
-//
-// func TestEvalBoundVariables(test *testing.T) {
-// 	text := `λx.λy.λz.((((f g) (h x)) y) z)`
-// 	expected_bound := []string{"x", "y", "z"}
-// 	expected_free := []string{"f", "g", "h"}
-//
-// 	tree, err := parse_tree(text)
-// 	if err != nil {
-// 		test.Error(err)
-// 	}
-// 	ctx := NewEvalContext()
-// 	_ = ctx.Eval(tree)
-// 	for _, name := range expected_bound {
-// 		if !ctx.GetBound().Has(name) {
-// 			test.Errorf("Name %s should be bound in %s", name, ToString(tree, true))
-// 		}
-// 	}
-// 	for _, name := range expected_free {
-// 		if !ctx.GetFree().Has(name) {
-// 			test.Errorf("Name %s should be free in %s", name, ToString(tree, true))
-// 		}
-// 	}
-// }
-//
-// func TestEvalUnreducable(test *testing.T) {
-// 	text := `((f g) h)`
-// 	expected := `((f g) h)`
-// 	if e := testEvalEquality(text, expected); e != nil {
-// 		test.Error(e)
-// 	}
-// }
+func TestEvalNonRedex(test *testing.T) {
+	{
+		text := `x`
+		expected := `0`
+		if e := testEvalEquality(text, expected); e != nil {
+			test.Error(e)
+		}
+	}
+	{
+		text := `λx.x`
+		expected := `(λ 0)`
+		if e := testEvalEquality(text, expected); e != nil {
+			test.Error(e)
+		}
+	}
+	{
+		text := `(f g)`
+		expected := `(0 1)`
+		if e := testEvalEquality(text, expected); e != nil {
+			test.Error(e)
+		}
+	}
+	{
+		text := `(f (g h))`
+		expected := `(0 (1 2))`
+		if e := testEvalEquality(text, expected); e != nil {
+			test.Error(e)
+		}
+	}
+}
 
-// func TestEvalWHNF(test *testing.T) {
-// 	text := `((λx.λy.(x y)) y)`
-// 	expected := ``
-// }
+func TestEvalSimpleRedex(test *testing.T) {
+	text := `((λx.x) y)`
+	expected := `0`
+	if e := testEvalEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
 
 // TODO: Develop this further
 // func TestEvalApplication(test *testing.T) {

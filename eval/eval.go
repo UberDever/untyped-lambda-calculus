@@ -1,6 +1,37 @@
 package eval
 
+import (
+	"lambda/ast/tree"
+)
+
 type eval_context struct {
+}
+
+func NewEvalContext() eval_context {
+	return eval_context{}
+}
+
+func shift_indicies(expr tree.Tree, cutoff, amount int) tree.Tree {
+	return expr
+}
+
+func substitute(in tree.Tree, expr tree.Tree, level int) tree.Tree {
+	return in
+}
+
+func is_redex(expr tree.Node) bool {
+	return false
+}
+
+func (c *eval_context) Eval(expr tree.Tree) tree.Tree {
+	// new_root := c.eval_rec(expr)
+	return expr
+}
+
+func (c *eval_context) eval_rec(expr tree.Node) tree.Node {
+	if is_redex(expr) {
+	}
+	return expr
 }
 
 // type eval_context struct {
@@ -33,16 +64,16 @@ type eval_context struct {
 // 	eval_stack := util.NewStack[any]()
 // 	eval := func() {
 // 		n := eval_stack.ForcePop().(int)
-// 		tag := domain.NodeId(n)
+// 		tag := tree.NodeId(n)
 // 		switch tag {
-// 		case domain.NodeIndexVariable:
+// 		case tree.NodeIndexVariable:
 // 			// nothing
-// 		case domain.NodeApplication:
+// 		case tree.NodeApplication:
 // 			lhs := eval_stack.ForcePop()
 // 			rhs := eval_stack.ForcePop()
 // 			application := fmt.Sprintf(`(%s %s)`, lhs, rhs)
 // 			eval_stack.Push(application)
-// 		case domain.NodeAbstraction:
+// 		case tree.NodeAbstraction:
 // 			arg := eval_stack.ForcePop()
 // 			body := eval_stack.ForcePop()
 // 			abstraction := fmt.Sprintf(`(%c %s %s)`, lambda_symbol, arg, body)
@@ -88,23 +119,23 @@ type eval_context struct {
 //
 // func (c *eval_context) eval() {
 // 	n := c.stack.ForcePop().Data().(int)
-// 	tag := domain.NodeId(n)
+// 	tag := tree.NodeId(n)
 // 	switch tag {
-// 	case domain.NodeIndexVariable:
+// 	case tree.NodeIndexVariable:
 // 		str := c.stack.ForcePop()
 // 		identifier := sexpr.S(
-// 			domain.NodeIndexVariable,
+// 			tree.NodeIndexVariable,
 // 			str,
 // 		)
 // 		c.free_variables.Add(str.Data().(string))
 // 		c.stack.Push(identifier)
-// 	case domain.NodeApplication:
+// 	case tree.NodeApplication:
 // 		lhs := c.stack.ForcePop()
 // 		rhs := c.stack.ForcePop()
 //
 // 		rest := lhs
-// 		lhs_tag := domain.NodeId(sexpr.Car(rest).Data().(int))
-// 		if lhs_tag == domain.NodeAbstraction {
+// 		lhs_tag := tree.NodeId(sexpr.Car(rest).Data().(int))
+// 		if lhs_tag == tree.NodeAbstraction {
 // 			// 	rest = ast.Cdr(rest)
 // 			// 	arg := ast.Car(rest)
 // 			// 	rest = ast.Cdr(rest)
@@ -112,16 +143,16 @@ type eval_context struct {
 // 			//             c.bound_variables()
 // 		} else {
 // 			application := sexpr.S(
-// 				domain.NodeApplication,
+// 				tree.NodeApplication,
 // 				lhs, rhs,
 // 			)
 // 			c.stack.Push(application)
 // 		}
-// 	case domain.NodeAbstraction:
+// 	case tree.NodeAbstraction:
 // 		arg := c.stack.ForcePop()
 // 		body := c.stack.ForcePop()
 // 		abstraction := sexpr.S(
-// 			domain.NodeAbstraction,
+// 			tree.NodeAbstraction,
 // 			arg, body,
 // 		)
 // 		name := sexpr.Car(sexpr.Cdr(arg))
@@ -136,10 +167,10 @@ type eval_context struct {
 
 // func (c *eval_context) bound_variables(expr ast.Sexpr) {
 // 	rest := expr
-// 	tag := domain.NodeId(ast.Car(rest).Data().(int))
+// 	tag := tree.NodeId(ast.Car(rest).Data().(int))
 // 	rest = ast.Cdr(rest)
 // 	switch tag {
-// 	case domain.NodeAbstraction:
+// 	case tree.NodeAbstraction:
 // 		arg := ast.Car(rest)
 // 		c.current_bound.Add(arg.Data().(string))
 // 		rest = ast.Cdr(rest)
