@@ -30,8 +30,16 @@ Also use [slides](https://www.cs.vu.nl/~femke/courses/ep/slides/4x4.pdf)
         - Seems more consistent with the rest of the interpreter
         - Final target for interpretation - form with `De bruijn` indices
         - Need to include `De bruijn conversion` after parser, and parser no longer deals with indices (good thing)
-- [ ] Consider using VM and bytecode for dividing evaluation into <generating code (with some strategy) -> pure execution>
-- [ ] Use normal order evaluation with WHNF
+- ~~[ ] Consider using VM and bytecode for dividing evaluation into <generating code (with some strategy) -> pure execution>~~
+    * Not today...
+- [x] Use normal order evaluation with WHNF
+    * Algorithm from [lecture](https://www.cs.cornell.edu/courses/cs4110/2018fa/lectures/lecture15.pdf) evaluates indices to whnf (although it doesn't say it in lecture itself)
+    * Notice that interpretation and testing with this approach is really non-trivial
+- [x] Make "gc" (just clean the tree every once in a while while performing evaluation)
+- [ ] Make interpretation of variables (easy)
+    * Use sexpr form of AST and just substitute stuff
+    * For this need to write sexpr parser
+- [ ] Make interpretation of expressions (not so easy)
 - [ ] Make std lib including all standard abstractions for sane programming from [here](https://www.lektorium.tv/sites/lektorium.tv/files/additional_files/20110227_systems_of_typed_lambda_calculi_moskvin_lecture02.pdf)
     * Booleans
     * Numbers

@@ -11,24 +11,51 @@ import (
 func replicate_subtree(t *tree.MutableTree, root tree.NodeId) (new_root tree.NodeId) {
 	nodes := t.Nodes()
 
-	var rec func(tree.NodeId) tree.NodeId
-	rec = func(r tree.NodeId) tree.NodeId {
+	var aux func(tree.NodeId) tree.NodeId
+	aux = func(r tree.NodeId) tree.NodeId {
 		node := t.Node(r)
 		iterable := ast.NewNodeIterable(node)
 		lhs, rhs := iterable.Children()
 		if lhs != tree.NodeNull {
-			node.Lhs = rec(lhs)
+			node.Lhs = aux(lhs)
 		}
 		if rhs != tree.NodeNull {
-			node.Rhs = rec(rhs)
+			node.Rhs = aux(rhs)
 		}
 		nodes = append(nodes, node)
 		return tree.NodeId(len(nodes) - 1)
 	}
 
-	new_root = rec(root)
+	new_root = aux(root)
 	t.SetNodes(nodes)
 	return
+}
+
+// gc baby (stop the world, mark and sweep)
+func collect_garbage(t *tree.MutableTree) {
+	nodes := make([]tree.Node, 0, len(t.Nodes())/4+1)
+
+	var aux func(tree.NodeId) tree.NodeId
+	aux = func(r tree.NodeId) tree.NodeId {
+		if r == tree.NodeNull {
+			return r
+		}
+		cur := t.Node(r)
+		nodes = append(nodes, cur)
+		last := len(nodes) - 1
+
+		lhs, rhs := ast.NewNodeIterable(cur).Children()
+		if lhs != tree.NodeNull {
+			nodes[last].Lhs = aux(lhs)
+		}
+		if rhs != tree.NodeNull {
+			nodes[last].Rhs = aux(rhs)
+		}
+
+		return tree.NodeId(last)
+	}
+	root := aux(t.RootId())
+	t.Tree = tree.NewTree(root, nodes)
 }
 
 func shift_indicies(t *tree.MutableTree, in tree.NodeId, cutoff, amount int) {
@@ -85,6 +112,10 @@ func substitute(t *tree.MutableTree, in tree.NodeId, expr tree.NodeId, level int
 
 func find_redex(t tree.Tree, expr tree.NodeId) tree.NodeId {
 	expr_node := t.Node(expr)
+	// for expr_node.Tag == tree.NodePureAbstraction {
+	// 	v := ast.ToPureAbstractionNode(t, expr_node)
+	// 	expr_node = t.Node(v.Body())
+	// }
 	if expr_node.Tag == tree.NodeApplication {
 		v := ast.ToApplicationNode(t, expr_node)
 		cur := v.Lhs()
@@ -116,14 +147,13 @@ func Eval(logger *util.Logger, source_code source.SourceCode, in_tree tree.Tree)
 	}
 
 	t := tree.NewMutableTree(in_tree.Clone())
-
-	for {
+	for reductions_count := 1; true; reductions_count++ {
 		app_id := find_redex(t.Tree, t.RootId())
 		if app_id == tree.NodeNull {
 			break
 		}
 
-		log_computation(t, app_id)
+		log_computation(t, t.RootId())
 
 		app := ast.ToApplicationNode(t.Tree, t.Node(app_id))
 		lambda := ast.ToPureAbstractionNode(t.Tree, t.Node(app.Lhs()))
@@ -135,12 +165,10 @@ func Eval(logger *util.Logger, source_code source.SourceCode, in_tree tree.Tree)
 		shift_indicies(&t, lambda_body, 0, -1)
 
 		t.SetNode(app_id, t.Node(lambda_body))
-		t.SetNode(app_rhs, tree.Node{
-			Tag:   tree.NodeIndexVariable,
-			Token: source.TokenInvalid,
-			Lhs:   420,
-			Rhs:   -1,
-		})
+		if reductions_count%10 == 0 {
+			collect_garbage(&t)
+		}
 	}
+	collect_garbage(&t)
 	return t.Tree
 }

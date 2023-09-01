@@ -247,6 +247,7 @@ func (p *parser) parse_abstraction() tree.NodeId {
 		Rhs:   rhs})
 }
 
+// BUG: I ignore all notion of name scoping in let, this is unacceptable
 func (p *parser) parse_let_binding() tree.NodeId {
 
 	token := p.current
