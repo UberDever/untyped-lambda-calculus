@@ -197,7 +197,7 @@ func Minified(sexpr string) string {
 	return s.ToString()
 }
 
-func spaced(sexpr string) string {
+func Spaced(sexpr string) string {
 	if !strings.ContainsRune(sexpr, '(') {
 		return strings.TrimSpace(sexpr)
 	}
@@ -267,7 +267,7 @@ func indent(sexpr string, indentWidth, maxScreenLimit, maxLineLen int) string {
 		return strings.TrimSpace(sexpr)
 	}
 
-	spaced := spaced(sexpr)
+	spaced := Spaced(sexpr)
 	positions := indentationPositions(spaced, indentWidth, maxScreenLimit, maxLineLen)
 	if len(positions) == 0 {
 		return spaced

@@ -101,19 +101,19 @@ func TestEvalSimpleRedex(test *testing.T) {
 	}
 }
 
-func TestEvalRedex1(test *testing.T) {
-	text := `((λu.λv.(u x)) y)`
-	expected := `(λ (2 1))`
-	if e := testEvalEquality(text, expected); e != nil {
-		test.Error(e)
-	}
-}
-
 func TestEvalNormalForm(test *testing.T) {
 	text := `
         λx1.λx2.λx3.(((y N1) N2) N3)
     `
 	expected := `(λ (λ (λ (((3 4) 5) 6))))`
+	if e := testEvalEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+func TestEvalRedex1(test *testing.T) {
+	text := `((λu.λv.(u x)) y)`
+	expected := `(λ (2 1))`
 	if e := testEvalEquality(text, expected); e != nil {
 		test.Error(e)
 	}
@@ -127,15 +127,23 @@ func TestEvalRedex2(test *testing.T) {
 	}
 }
 
-// func TestEvalRedexN(test *testing.T) {
-// 	text := `
-//     let K = λx.λy.x in
-//     let S = λx.λy.λz.((x z) (y z)) in
-//     let I = λx.x in
-//     ((S K) K)
-//     `
-// 	expected := `(λ 0)`
-// 	if e := testEvalEquality(text, expected); e != nil {
-// 		test.Error(e)
-// 	}
-// }
+func TestEvalRedex3(test *testing.T) {
+	text := `((λx.x) ((λy.y) ((λz.z) N))) `
+	expected := `0`
+	if e := testEvalEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}
+
+func TestEvalSKI(test *testing.T) {
+	text := `
+    let K = λx.λy.x in
+    let S = λx.λy.λz.((x z) (y z)) in
+    let I = λx.x in
+    (((S K) K) 69)
+    `
+	expected := `(λ 0)`
+	if e := testEvalEquality(text, expected); e != nil {
+		test.Error(e)
+	}
+}

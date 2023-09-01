@@ -66,9 +66,8 @@ func substitute(t *tree.MutableTree, in tree.NodeId, expr tree.NodeId, level int
 		v := ast.ToIndexVariableNode(t.Tree, node)
 		index := v.Index()
 		if index == level {
-			expr_cloned := replicate_subtree(t, expr)
-			node := t.Node(expr_cloned)
-			t.SetNode(in, node)
+			expr_cloned := t.Node(replicate_subtree(t, expr))
+			t.SetNode(in, expr_cloned)
 		}
 	case tree.NodePureAbstraction:
 		v := ast.ToPureAbstractionNode(t.Tree, node)
@@ -84,42 +83,64 @@ func substitute(t *tree.MutableTree, in tree.NodeId, expr tree.NodeId, level int
 	}
 }
 
-func is_redex(t tree.Tree, expr tree.Node) bool {
-	if expr.Tag == tree.NodeApplication {
-		v := ast.ToApplicationNode(t, expr)
-		lhs := t.Node(v.Lhs())
-		switch lhs.Tag {
-		case tree.NodeApplication:
-			return is_redex(t, lhs)
-		case tree.NodePureAbstraction:
-			return true
+func find_redex(t tree.Tree, expr tree.NodeId) tree.NodeId {
+	expr_node := t.Node(expr)
+	if expr_node.Tag == tree.NodeApplication {
+		v := ast.ToApplicationNode(t, expr_node)
+		cur := v.Lhs()
+		cur_node := t.Node(cur)
+		for cur_node.Tag == tree.NodeApplication {
+			cur_app := ast.ToApplicationNode(t, cur_node)
+
+			new_cur := cur_app.Lhs()
+			expr = cur
+			cur = new_cur
+			cur_node = t.Node(cur)
+		}
+		if cur_node.Tag == tree.NodePureAbstraction {
+			return expr
 		}
 	}
-	return false
+	return tree.NodeNull
 }
 
 func Eval(logger *util.Logger, source_code source.SourceCode, in_tree tree.Tree) tree.Tree {
-	log_computation := func(t tree.Tree) {
-		tree := ast.Print(source_code, t)
-		pretty := sexpr.Pretty(tree)
+	log_computation := func(t tree.MutableTree, id tree.NodeId) {
+		old_root := t.RootId()
+		t.SetRoot(id)
+		tree := ast.Print(source_code, t.Tree)
+		t.SetRoot(old_root)
+
+		pretty := sexpr.Spaced(tree)
 		logger.Add(util.NewMessage(util.Debug, 0, 0, "e", pretty))
 	}
 
-	t := tree.NewMutableTree(in_tree)
+	t := tree.NewMutableTree(in_tree.Clone())
 
-	// TODO: This is incorrect, need to account for case ((((λx. x) 5) 5) 5) *deep nesting*
-	for is_redex(t.Tree, t.Root()) {
-		log_computation(t.Tree)
-		application := ast.ToApplicationNode(t.Tree, t.Root())
-		lhs := t.Node(application.Lhs())
-		abstraction := ast.ToPureAbstractionNode(t.Tree, lhs)
-		body := abstraction.Body()
-		rhs := application.Rhs()
+	for {
+		app_id := find_redex(t.Tree, t.RootId())
+		if app_id == tree.NodeNull {
+			break
+		}
 
-		shift_indicies(&t, rhs, 0, 1)
-		substitute(&t, body, rhs, 0)
-		shift_indicies(&t, body, 0, -1)
-		t.SetRoot(body)
+		log_computation(t, app_id)
+
+		app := ast.ToApplicationNode(t.Tree, t.Node(app_id))
+		lambda := ast.ToPureAbstractionNode(t.Tree, t.Node(app.Lhs()))
+		app_rhs := app.Rhs()
+		lambda_body := lambda.Body()
+
+		shift_indicies(&t, app_rhs, 0, 1)
+		substitute(&t, lambda_body, app_rhs, 0)
+		shift_indicies(&t, lambda_body, 0, -1)
+
+		t.SetNode(app_id, t.Node(lambda_body))
+		t.SetNode(app_rhs, tree.Node{
+			Tag:   tree.NodeIndexVariable,
+			Token: source.TokenInvalid,
+			Lhs:   420,
+			Rhs:   -1,
+		})
 	}
-	return t.Clone()
+	return t.Tree
 }
