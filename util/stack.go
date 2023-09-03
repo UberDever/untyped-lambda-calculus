@@ -43,3 +43,7 @@ func (stack *Stack[T]) Pop() (T, bool) {
 func (stack Stack[T]) IsEmpty() bool {
 	return len(stack.keys) == 0
 }
+
+func (stack Stack[T]) Values() []T {
+	return stack.keys
+}

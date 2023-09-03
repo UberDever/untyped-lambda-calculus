@@ -1,157 +1,155 @@
 package eval
 
 import (
-	"fmt"
-	"lambda/ast"
-	"lambda/domain"
-	"lambda/util"
+	"lambda/ast/ast"
+	"lambda/ast/tree"
 )
 
-type eval_context struct {
-	stack           util.Stack[ast.Sexpr]
-	bound_variables util.Set[string]
-	free_variables  util.Set[string]
-}
+func replicate_subtree(t *tree.MutableTree, root tree.NodeId) (new_root tree.NodeId) {
+	nodes := t.Nodes()
 
-func NewEvalContext() eval_context {
-	return eval_context{
-		stack: util.NewStack[ast.Sexpr](),
-		bound_variables: util.NewSet[string](func(lhs, rhs string) bool {
-			return lhs == rhs
-		}),
-		free_variables: util.NewSet[string](func(lhs, rhs string) bool {
-			return lhs == rhs
-		}),
-	}
-}
-
-func ToString(expr ast.Sexpr, pretty bool) string {
-	if expr.IsAtom() {
-		return ast.Pretty(expr.Print())
-	}
-
-	lambda_symbol := '\\'
-	if pretty {
-		lambda_symbol = 'λ'
-	}
-	eval_stack := util.NewStack[any]()
-	eval := func() {
-		n := eval_stack.ForcePop().(int)
-		tag := domain.NodeId(n)
-		switch tag {
-		case domain.NodeIdentifier:
-			// nothing
-		case domain.NodeApplication:
-			lhs := eval_stack.ForcePop()
-			rhs := eval_stack.ForcePop()
-			application := fmt.Sprintf(`(%s %s)`, lhs, rhs)
-			eval_stack.Push(application)
-		case domain.NodeAbstraction:
-			arg := eval_stack.ForcePop()
-			body := eval_stack.ForcePop()
-			abstraction := fmt.Sprintf(`(%c %s %s)`, lambda_symbol, arg, body)
-			eval_stack.Push(abstraction)
-		default:
-			panic("unreachable")
+	var aux func(tree.NodeId) tree.NodeId
+	aux = func(r tree.NodeId) tree.NodeId {
+		node := t.Node(r)
+		iterable := ast.NewNodeIterable(node)
+		lhs, rhs := iterable.Children()
+		if lhs != tree.NodeNull {
+			node.Lhs = aux(lhs)
 		}
-	}
-	onEnter := func(s ast.Sexpr) {
-		if s.IsAtom() {
-			eval_stack.Push(s.Data())
-		} else {
-			eval()
+		if rhs != tree.NodeNull {
+			node.Rhs = aux(rhs)
 		}
+		nodes = append(nodes, node)
+		return tree.NodeId(len(nodes) - 1)
 	}
-	ast.TraversePostorder(expr, onEnter)
-	eval()
-	return eval_stack.ForcePop().(string)
+
+	new_root = aux(root)
+	t.SetNodes(nodes)
+	return
 }
 
-func (c *eval_context) GetBound() util.Set[string] {
-	return c.bound_variables
-}
+// gc baby (stop the world, mark and sweep)
+func collect_garbage(t *tree.MutableTree, root tree.NodeId) {
+	nodes := make([]tree.Node, 0, len(t.Nodes())/4+1)
 
-func (c *eval_context) GetFree() util.Set[string] {
-	return c.free_variables
-}
+	var aux func(tree.NodeId) tree.NodeId
+	aux = func(r tree.NodeId) tree.NodeId {
+		cur := t.Node(r)
+		nodes = append(nodes, cur)
+		last := len(nodes) - 1
 
-func (c *eval_context) Eval(expr ast.Sexpr) ast.Sexpr {
-	onEnter := func(s ast.Sexpr) {
-		if s.IsAtom() {
-			c.stack.Push(s)
-		} else {
-			fmt.Printf("%s %v\n", ToString(s, true), c.bound_variables)
-			c.eval()
+		lhs, rhs := ast.NewNodeIterable(cur).Children()
+		if lhs != tree.NodeNull {
+			nodes[last].Lhs = aux(lhs)
 		}
+		if rhs != tree.NodeNull {
+			nodes[last].Rhs = aux(rhs)
+		}
+
+		return tree.NodeId(last)
 	}
-	ast.TraversePostorder(expr, onEnter)
-	fmt.Printf("%s %v\n", ToString(expr, true), c.bound_variables)
-	c.eval()
-	return c.stack.ForcePop()
+	new_root := aux(root)
+	t.Tree = tree.NewTree(new_root, nodes)
 }
 
-func (c *eval_context) eval() {
-	n := c.stack.ForcePop().Data().(int)
-	tag := domain.NodeId(n)
-	switch tag {
-	case domain.NodeIdentifier:
-		str := c.stack.ForcePop()
-		identifier := ast.S(
-			domain.NodeIdentifier,
-			str,
-		)
-		c.free_variables.Add(str.Data().(string))
-		c.stack.Push(identifier)
-	case domain.NodeApplication:
-		lhs := c.stack.ForcePop()
-		rhs := c.stack.ForcePop()
-
-		rest := lhs
-		lhs_tag := domain.NodeId(ast.Car(rest).Data().(int))
-		if lhs_tag == domain.NodeAbstraction {
-			// 	rest = ast.Cdr(rest)
-			// 	arg := ast.Car(rest)
-			// 	rest = ast.Cdr(rest)
-			// 	body := ast.Car(rest)
-			//             c.bound_variables()
-		} else {
-			application := ast.S(
-				domain.NodeApplication,
-				lhs, rhs,
-			)
-			c.stack.Push(application)
+func shift_indicies(t *tree.MutableTree, in tree.NodeId, cutoff, amount int) {
+	node := t.Node(in)
+	switch node.Tag {
+	case tree.NodeIndexVariable:
+		v := ast.ToIndexVariableNode(t.Tree, node)
+		index := v.Index()
+		if index >= cutoff {
+			index += amount
 		}
-	case domain.NodeAbstraction:
-		arg := c.stack.ForcePop()
-		body := c.stack.ForcePop()
-		abstraction := ast.S(
-			domain.NodeAbstraction,
-			arg, body,
-		)
-		name := ast.Car(ast.Cdr(arg))
-		str := name.Data().(string)
-		c.bound_variables.Add(str)
-		c.free_variables.Remove(str)
-		c.stack.Push(abstraction)
+		new_node := tree.Node{
+			Tag:   node.Tag,
+			Token: node.Token,
+			Lhs:   tree.NodeId(index),
+			Rhs:   node.Rhs,
+		}
+		t.SetNode(in, new_node)
+	case tree.NodePureAbstraction:
+		v := ast.ToPureAbstractionNode(t.Tree, node)
+		shift_indicies(t, v.Body(), cutoff+1, amount)
+	case tree.NodeApplication:
+		v := ast.ToApplicationNode(t.Tree, node)
+		shift_indicies(t, v.Lhs(), cutoff, amount)
+		shift_indicies(t, v.Rhs(), cutoff, amount)
 	default:
 		panic("unreachable")
 	}
 }
 
-func (c *eval_context) alpha_conversion(arg ast.Sexpr, body ast.Sexpr) {
-
+func substitute(t *tree.MutableTree, in tree.NodeId, expr tree.NodeId, level int) {
+	node := t.Node(in)
+	switch node.Tag {
+	case tree.NodeIndexVariable:
+		v := ast.ToIndexVariableNode(t.Tree, node)
+		index := v.Index()
+		if index == level {
+			expr_cloned := t.Node(replicate_subtree(t, expr))
+			t.SetNode(in, expr_cloned)
+		}
+	case tree.NodePureAbstraction:
+		v := ast.ToPureAbstractionNode(t.Tree, node)
+		body := v.Body()
+		shift_indicies(t, expr, 0, 1)
+		substitute(t, body, expr, level+1)
+	case tree.NodeApplication:
+		v := ast.ToApplicationNode(t.Tree, node)
+		substitute(t, v.Lhs(), expr, level)
+		substitute(t, v.Rhs(), expr, level)
+	default:
+		panic("unreachable")
+	}
 }
 
-// func (c *eval_context) bound_variables(expr ast.Sexpr) {
-// 	rest := expr
-// 	tag := domain.NodeId(ast.Car(rest).Data().(int))
-// 	rest = ast.Cdr(rest)
-// 	switch tag {
-// 	case domain.NodeAbstraction:
-// 		arg := ast.Car(rest)
-// 		c.current_bound.Add(arg.Data().(string))
-// 		rest = ast.Cdr(rest)
-// 		body := ast.Car(rest)
-// 		c.bound_variables(body)
-// 	}
-// }
+func find_redex_whnf(t tree.Tree, expr tree.NodeId) tree.NodeId {
+	expr_node := t.Node(expr)
+	if expr_node.Tag == tree.NodeApplication {
+		v := ast.ToApplicationNode(t, expr_node)
+		cur := v.Lhs()
+		cur_node := t.Node(cur)
+		for cur_node.Tag == tree.NodeApplication {
+			cur_app := ast.ToApplicationNode(t, cur_node)
+
+			new_cur := cur_app.Lhs()
+			expr = cur
+			cur = new_cur
+			cur_node = t.Node(cur)
+		}
+		if cur_node.Tag == tree.NodePureAbstraction {
+			return expr
+		}
+	}
+	return tree.NodeNull
+}
+
+func Eval(log_eval func(t tree.Tree), in_tree tree.Tree, root tree.NodeId) tree.Tree {
+
+	t := tree.NewMutableTree(in_tree.Clone())
+	for reductions_count := 1; true; reductions_count++ {
+		app_id := find_redex_whnf(t.Tree, root)
+		if app_id == tree.NodeNull {
+			break
+		}
+
+		log_eval(t.Tree)
+
+		app := ast.ToApplicationNode(t.Tree, t.Node(app_id))
+		lambda := ast.ToPureAbstractionNode(t.Tree, t.Node(app.Lhs()))
+		app_rhs := app.Rhs()
+		lambda_body := lambda.Body()
+
+		shift_indicies(&t, app_rhs, 0, 1)
+		substitute(&t, lambda_body, app_rhs, 0)
+		shift_indicies(&t, lambda_body, 0, -1)
+
+		t.SetNode(app_id, t.Node(lambda_body))
+		if reductions_count%10 == 0 {
+			// collect_garbage(&t, root)
+		}
+	}
+	// collect_garbage(&t, root)
+	return t.Tree
+}

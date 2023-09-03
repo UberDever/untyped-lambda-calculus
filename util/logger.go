@@ -1,4 +1,4 @@
-package domain
+package util
 
 import "fmt"
 
@@ -50,7 +50,7 @@ func NewLogger() Logger {
 }
 
 func (l Logger) IsEmpty() bool {
-	return len(l.messages) == 0
+	return len(l.messages) == 0 || l.next >= len(l.messages)
 }
 
 func (l *Logger) Clear() {

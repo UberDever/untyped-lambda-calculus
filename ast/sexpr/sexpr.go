@@ -1,5 +1,5 @@
 // Following implementation of s-expressions assumes that they are trees (acyclic graphs)
-package ast
+package sexpr
 
 import (
 	"fmt"
@@ -197,7 +197,7 @@ func Minified(sexpr string) string {
 	return s.ToString()
 }
 
-func spaced(sexpr string) string {
+func Spaced(sexpr string) string {
 	if !strings.ContainsRune(sexpr, '(') {
 		return strings.TrimSpace(sexpr)
 	}
@@ -234,10 +234,11 @@ func indent(sexpr string, indentWidth, maxScreenLimit, maxLineLen int) string {
 
 		curDepth := -1
 		for i := 0; i < len(sexpr); i++ {
-			if sexpr[i] == '(' {
+			switch sexpr[i] {
+			case '(':
 				openParens.Push(i)
 				curDepth++
-			} else if sexpr[i] == ')' {
+			case ')':
 				begin := openParens.ForcePop()
 				end := i
 				openToClosed[begin] = struct{ closing, depth int }{end, curDepth}
@@ -266,7 +267,7 @@ func indent(sexpr string, indentWidth, maxScreenLimit, maxLineLen int) string {
 		return strings.TrimSpace(sexpr)
 	}
 
-	spaced := spaced(sexpr)
+	spaced := Spaced(sexpr)
 	positions := indentationPositions(spaced, indentWidth, maxScreenLimit, maxLineLen)
 	if len(positions) == 0 {
 		return spaced
@@ -286,7 +287,6 @@ func indent(sexpr string, indentWidth, maxScreenLimit, maxLineLen int) string {
 			if curIndex < len(positions) {
 				pos = positions[curIndex]
 			}
-			continue
 		}
 		s.WriteRune(c)
 	}
