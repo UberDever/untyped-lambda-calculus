@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"lambda/ast/ast"
 	"lambda/ast/sexpr"
+	"lambda/ast/tree"
 	debruijn "lambda/middle/de-bruijn"
 	"lambda/syntax/parser"
 	"lambda/util"
@@ -46,13 +47,20 @@ func testEvalEquality(text, expected string) error {
 	result := debruijn.ToDeBruijn(source_code, namedTree)
 	de_bruijn_tree := result.Tree
 
-	eval_tree := Eval(&logger, source_code, de_bruijn_tree)
+	log_computation := func(t tree.Tree) {
+		tree := ast.Print(source_code, t, t.RootId())
+		pretty := sexpr.Spaced(tree)
+		logger.Add(util.NewMessage(util.Debug, 0, 0, "e", pretty))
+	}
+
+	eval_tree := Eval(log_computation, de_bruijn_tree, de_bruijn_tree.RootId())
+
 	// for !logger.IsEmpty() {
 	// 	m, _ := logger.Next()
-	// 	// fmt.Println(m)
+	// 	fmt.Println(m)
 	// }
 
-	got := ast.Print(source_code, eval_tree)
+	got := ast.Print(source_code, eval_tree, eval_tree.RootId())
 	if sexpr.Minified(got) != sexpr.Minified(expected) {
 		lhs := sexpr.Pretty(got)
 		rhs := sexpr.Pretty(expected)

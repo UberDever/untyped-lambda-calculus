@@ -58,7 +58,7 @@ func testAstEquality(text, expected string) error {
 		}
 	}
 
-	got := ast.Print(source_code, de_bruijn_tree)
+	got := ast.Print(source_code, de_bruijn_tree, de_bruijn_tree.RootId())
 	if sexpr.Minified(got) != sexpr.Minified(expected) {
 		lhs := sexpr.Pretty(got)
 		rhs := sexpr.Pretty(expected)

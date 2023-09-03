@@ -113,7 +113,7 @@ func ToDeBruijn(source_code source.SourceCode, tree_with_names tree.Tree) DeBrui
 		}
 	}
 
-	ast.TraversePreorder(tree_with_names, onEnter, onExit)
+	ast.TraversePreorder(tree_with_names, tree_with_names.RootId(), onEnter, onExit)
 	root := tree.NodeId(len(nodes) - 1)
 
 	return DeBruijnResult{

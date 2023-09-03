@@ -165,8 +165,8 @@ func (n pure_abstraction_node) Body() tree.NodeId {
 
 type NodeAction = func(tree.Tree, tree.NodeId)
 
-func TraversePreorder(tree tree.Tree, onEnter, onExit NodeAction) {
-	traversePreorder(tree, onEnter, onExit, tree.RootId())
+func TraversePreorder(tree tree.Tree, root tree.NodeId, onEnter, onExit NodeAction) {
+	traversePreorder(tree, onEnter, onExit, root)
 }
 
 func traversePreorder(t tree.Tree, onEnter, onExit NodeAction, id tree.NodeId) {
@@ -182,7 +182,7 @@ func traversePreorder(t tree.Tree, onEnter, onExit NodeAction, id tree.NodeId) {
 	traversePreorder(t, onEnter, onExit, rhs)
 }
 
-func Print(src source.SourceCode, in_tree tree.Tree) string {
+func Print(src source.SourceCode, in_tree tree.Tree, root tree.NodeId) string {
 	str := strings.Builder{}
 	onEnter := func(t tree.Tree, id tree.NodeId) {
 		node := t.Node(id)
@@ -202,7 +202,7 @@ func Print(src source.SourceCode, in_tree tree.Tree) string {
 			str.WriteByte(')')
 		}
 	}
-	TraversePreorder(in_tree, onEnter, onExit)
+	TraversePreorder(in_tree, root, onEnter, onExit)
 
 	return str.String()
 }
