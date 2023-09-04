@@ -9,7 +9,7 @@ import (
 
 type DeBruijnResult struct {
 	Tree          tree.Tree
-	VariableNames []string
+	VariableNames map[int]string
 }
 
 func ToDeBruijn(source_code source.SourceCode, tree_with_names tree.Tree) DeBruijnResult {
@@ -17,7 +17,7 @@ func ToDeBruijn(source_code source.SourceCode, tree_with_names tree.Tree) DeBrui
 	free_vars_context := make(map[string]int)
 	indicies := util.NewStack[tree.NodeId]()
 	node_ids := util.NewStack[tree.NodeId]()
-	variable_names := make([]string, 0, 8)
+	variable_names := make(map[int]string)
 
 	abs_var_id := func(variable string) tree.NodeId {
 		vars := abstraction_vars.Values()
@@ -62,7 +62,7 @@ func ToDeBruijn(source_code source.SourceCode, tree_with_names tree.Tree) DeBrui
 			if index == tree.NodeNull {
 				index = free_var_id(id)
 			}
-			variable_names = append(variable_names, id)
+			variable_names[int(index)] = id
 			indicies.Push(index)
 		case tree.NodeApplication:
 			break
@@ -82,12 +82,11 @@ func ToDeBruijn(source_code source.SourceCode, tree_with_names tree.Tree) DeBrui
 		switch node.Tag {
 		case tree.NodeNamedVariable:
 			index := indicies.ForcePop()
-			name_index := tree.NodeId(len(variable_names) - 1)
 			id := add_node(tree.Node{
 				Tag:   tree.NodeIndexVariable,
 				Token: token,
 				Lhs:   index,
-				Rhs:   name_index})
+				Rhs:   tree.NodeNull})
 			node_ids.Push(id)
 		case tree.NodeApplication:
 			rhs := node_ids.ForcePop()

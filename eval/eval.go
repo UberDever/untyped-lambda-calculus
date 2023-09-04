@@ -125,11 +125,40 @@ func find_redex_whnf(t tree.Tree, expr tree.NodeId) tree.NodeId {
 	return tree.NodeNull
 }
 
+func find_redex_nf(t tree.Tree, expr tree.NodeId) tree.NodeId {
+	var aux func(tree.NodeId) tree.NodeId
+	aux = func(id tree.NodeId) tree.NodeId {
+		n := t.Node(id)
+		switch n.Tag {
+		case tree.NodeApplication:
+			app := ast.ToApplicationNode(t, n)
+			lhs := t.Node(app.Lhs())
+			switch lhs.Tag {
+			case tree.NodeApplication:
+				return aux(app.Lhs())
+			case tree.NodePureAbstraction:
+				return id
+			case tree.NodeIndexVariable:
+				return aux(app.Rhs())
+			default:
+				panic("unreachable")
+			}
+		case tree.NodePureAbstraction:
+			return aux(ast.ToPureAbstractionNode(t, n).Body())
+		case tree.NodeIndexVariable:
+			return tree.NodeNull
+		default:
+			panic("unreachable")
+		}
+	}
+	return aux(expr)
+}
+
 func Eval(log_eval func(t tree.Tree), in_tree tree.Tree, root tree.NodeId) tree.Tree {
 
 	t := tree.NewMutableTree(in_tree.Clone())
 	for reductions_count := 1; true; reductions_count++ {
-		app_id := find_redex_whnf(t.Tree, root)
+		app_id := find_redex_nf(t.Tree, root)
 		if app_id == tree.NodeNull {
 			break
 		}
@@ -147,7 +176,8 @@ func Eval(log_eval func(t tree.Tree), in_tree tree.Tree, root tree.NodeId) tree.
 
 		t.SetNode(app_id, t.Node(lambda_body))
 		if reductions_count%10 == 0 {
-			// collect_garbage(&t, root)
+			collect_garbage(&t, root)
+			root = t.RootId()
 		}
 	}
 	// collect_garbage(&t, root)

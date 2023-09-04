@@ -141,10 +141,6 @@ func (n index_variable_node) Index() int {
 	return int(n.n.Lhs)
 }
 
-func (n index_variable_node) NameIndex() int {
-	return int(n.n.Rhs)
-}
-
 func ToPureAbstractionNode(tree tree.Tree, node tree.Node) pure_abstraction_node {
 	return pure_abstraction_node{
 		n: node,
